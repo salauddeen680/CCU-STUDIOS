@@ -3,7 +3,7 @@
 import { useFooter } from "@/lib/data"
 
 export function Footer() {
-  const footer = useFooter()
+  const { footer } = useFooter()
 
   return (
     <footer className="mt-16 border-t border-border/70 bg-background/60">

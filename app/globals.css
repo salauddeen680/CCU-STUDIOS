@@ -6,9 +6,14 @@
   --background: #0a0a0a;
   --foreground: #f5f5f5;
   --card: #121214;
+  --card-foreground: #f5f5f5;
   --border: #232327;
   --muted: #8a8a92;
+  --muted-foreground: #8a8a92;
   --primary: #ff0033;
+  --primary-foreground: #ffffff;
+  --accent: #d4af37;
+  --accent-foreground: #0a0a0a;
   --gold: #d4af37;
   --radius: 0.9rem;
 }
@@ -52,7 +57,8 @@ body {
   -webkit-backdrop-filter: blur(16px);
 }
 
-.text-glow {
+.text-glow,
+.text-glow-red {
   text-shadow: 0 0 18px rgba(255, 0, 51, 0.55);
 }
 

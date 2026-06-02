@@ -12,9 +12,14 @@ const config: Config = {
         background: "var(--background)",
         foreground: "var(--foreground)",
         card: "var(--card)",
+        "card-foreground": "var(--card-foreground)",
         border: "var(--border)",
         muted: "var(--muted)",
+        "muted-foreground": "var(--muted-foreground)",
         primary: "var(--primary)",
+        "primary-foreground": "var(--primary-foreground)",
+        accent: "var(--accent)",
+        "accent-foreground": "var(--accent-foreground)",
         gold: "var(--gold)",
       },
       fontFamily: {
@@ -23,6 +28,7 @@ const config: Config = {
       },
       boxShadow: {
         glow: "0 0 24px rgba(255, 0, 51, 0.35)",
+        "glow-red": "0 0 24px rgba(255, 0, 51, 0.35)",
         "glow-gold": "0 0 24px rgba(212, 175, 55, 0.30)",
       },
       keyframes: {

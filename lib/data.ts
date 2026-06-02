@@ -136,12 +136,32 @@ export function useFooter() {
 
   useEffect(() => {
     const unsub = onDocSnapshot(doc(db, "settings", "footer"), (snap) => {
-      if (snap.exists()) setFooter(snap.data() as FooterConfig)
+      if (snap.exists()) setFooter({ ...DEFAULT_FOOTER, ...(snap.data() as FooterConfig) })
     })
     return () => unsub()
   }, [])
 
-  return footer
+  return { footer }
+}
+
+export function useAllComments() {
+  const [comments, setComments] = useState<Comment[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const q = query(collection(db, "comments"), orderBy("createdAt", "desc"))
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Comment))
+        setLoading(false)
+      },
+      () => setLoading(false)
+    )
+    return () => unsub()
+  }, [])
+
+  return { comments, loading }
 }
 
 /* ------------------------------------------------------------------ */
@@ -156,9 +176,10 @@ export async function likeCharacter(id: string) {
   await updateDoc(doc(db, "characters", id), { likes: increment(1) })
 }
 
-export async function createComic(data: Omit<Comic, "id">) {
+export async function createComic(data: Omit<Comic, "id" | "likes" | "createdAt">) {
   return addDoc(collection(db, "comics"), {
     ...data,
+    likes: 0,
     createdAt: Date.now(),
   })
 }
@@ -171,9 +192,10 @@ export async function deleteComic(id: string) {
   await deleteDoc(doc(db, "comics", id))
 }
 
-export async function createCharacter(data: Omit<Character, "id">) {
+export async function createCharacter(data: Omit<Character, "id" | "likes" | "createdAt">) {
   return addDoc(collection(db, "characters"), {
     ...data,
+    likes: 0,
     createdAt: Date.now(),
   })
 }
@@ -186,7 +208,7 @@ export async function deleteCharacter(id: string) {
   await deleteDoc(doc(db, "characters", id))
 }
 
-export async function addComment(data: Omit<Comment, "id">) {
+export async function addComment(data: Omit<Comment, "id" | "createdAt">) {
   return addDoc(collection(db, "comments"), {
     ...data,
     createdAt: Date.now(),

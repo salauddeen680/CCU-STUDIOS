@@ -46,3 +46,6 @@ export function uploadFile(
     )
   })
 }
+
+// Alias used by the admin uploader component.
+export const uploadImage = uploadFile
