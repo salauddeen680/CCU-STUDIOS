@@ -1,12 +1,19 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Trash2, Plus, Save, X, Star } from "lucide-react"
+import { Pencil, Trash2, Plus, Save, X, Layers } from "lucide-react"
 import { useComics, createComic, updateComic, deleteComic } from "@/lib/data"
 import { ImageUploader } from "./image-uploader"
 import type { Comic } from "@/lib/types"
 
-const empty = { title: "", description: "", cover: "", images: [] as string[], ultimate: false }
+// Humne form ke andar ab ek 'timeline' option jodh diya hai
+const empty = { 
+  title: "", 
+  description: "", 
+  cover: "", 
+  images: [] as string[], 
+  timeline: "asli" // default option: asli, purani, ya dusri
+}
 
 export function ComicsManager() {
   const { comics } = useComics()
@@ -23,12 +30,21 @@ export function ComicsManager() {
 
   function openEdit(c: Comic) {
     setEditing(c)
+    
+    // Purane data ke sath compatibility rakhne ke liye check lagaya hai
+    let currentTimeline = "asli"
+    if (c.timeline) {
+      currentTimeline = c.timeline
+    } else if (c.ultimate) {
+      currentTimeline = "purani"
+    }
+
     setForm({
       title: c.title,
       description: c.description,
       cover: c.cover || "",
       images: c.images || [],
-      ultimate: !!c.ultimate,
+      timeline: currentTimeline,
     })
     setShowForm(true)
   }
@@ -36,10 +52,14 @@ export function ComicsManager() {
   async function save() {
     if (!form.title.trim()) return
     setSaving(true)
+    
     const payload = {
       ...form,
       cover: form.cover || form.images[0] || "",
+      // ultimate checkbox ko backup ke liye true rakhenge agar timeline purani ya dusri ho
+      ultimate: form.timeline === "purani" || form.timeline === "dusri",
     }
+    
     try {
       if (editing) {
         await updateComic(editing.id, payload)
@@ -56,6 +76,19 @@ export function ComicsManager() {
 
   async function remove(id: string) {
     if (confirm("Delete this comic permanently?")) await deleteComic(id)
+  }
+
+  // Helper function website par sundar rang-birange badges dikhane ke liye
+  function getTimelineBadge(timelineStr: string | undefined, ultimateBool: boolean) {
+    const t = timelineStr || (ultimateBool ? "purani" : "asli")
+    
+    if (t === "purani") {
+      return <span className="ml-2 inline-block rounded bg-amber-500/20 px-2 py-0.5 text-xs font-semibold text-amber-400 border border-amber-500/30">⚡ Purani Timeline</span>
+    }
+    if (t === "dusri") {
+      return <span className="ml-2 inline-block rounded bg-purple-500/20 px-2 py-0.5 text-xs font-semibold text-purple-400 border border-purple-500/30">🌌 Dusra Universe</span>
+    }
+    return <span className="ml-2 inline-block rounded bg-blue-500/20 px-2 py-0.5 text-xs font-semibold text-blue-400 border border-blue-500/30">🟢 Asli Timeline</span>
   }
 
   return (
@@ -90,6 +123,7 @@ export function ComicsManager() {
             placeholder="Comic title"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
+          
           <textarea
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -98,15 +132,21 @@ export function ComicsManager() {
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
 
-          <label className="flex items-center gap-2 text-sm text-foreground">
-            <input
-              type="checkbox"
-              checked={form.ultimate}
-              onChange={(e) => setForm({ ...form, ultimate: e.target.checked })}
-              className="accent-primary"
-            />
-            <Star className="h-4 w-4 text-accent" /> Feature in Ultimate Comic
-          </label>
+          {/* Smart Timeline Selection Option Dropdown */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <Layers className="h-4 w-4 text-primary" /> Select Comic Timeline / Universe
+            </label>
+            <select
+              value={form.timeline}
+              onChange={(e) => setForm({ ...form, timeline: e.target.value })}
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary cursor-pointer"
+            >
+              <option value="asli">🟢 Asli Timeline (Real-Time Stories)</option>
+              <option value="purani">👑 Purani Timeline (Backstory / Origins)</option>
+              <option value="dusri">🌌 Dusre Characters / Inspired Universe</option>
+            </select>
+          </div>
 
           <div>
             <p className="mb-2 text-sm font-medium text-foreground">Cover image</p>
@@ -139,8 +179,9 @@ export function ComicsManager() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src || "/placeholder.svg"} alt={`page ${i + 1}`} className="aspect-[3/4] w-full rounded object-cover" />
                     <button
+                      type="button"
                       onClick={() => setForm((f) => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }))}
-                      className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white"
+                      className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white z-10"
                       aria-label="Remove page"
                     >
                       <X className="h-3 w-3" />
@@ -171,10 +212,13 @@ export function ComicsManager() {
               className="h-20 w-14 rounded object-cover"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-foreground">
-                {c.title} {c.ultimate && <Star className="ml-1 inline h-3.5 w-3.5 text-accent" />}
-              </p>
-              <p className="truncate text-xs text-muted-foreground">{c.description}</p>
+              <div className="flex flex-wrap items-center gap-y-1">
+                <p className="truncate font-semibold text-foreground">
+                  {c.title}
+                </p>
+                {getTimelineBadge(c.timeline, !!c.ultimate)}
+              </div>
+              <p className="truncate text-xs text-muted-foreground mt-0.5">{c.description}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {c.images?.length || 0} pages · {c.likes || 0} likes
               </p>
