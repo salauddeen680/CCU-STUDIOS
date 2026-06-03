@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil, Trash2, Plus, Save, X } from "lucide-react"
+import { Pencil, Trash2, Plus, Save, X, ShieldAlert } from "lucide-react"
 import { useCharacters, createCharacter, updateCharacter, deleteCharacter } from "@/lib/data"
 import { ImageUploader } from "./image-uploader"
 import type { Character } from "@/lib/types"
@@ -56,16 +56,32 @@ export function CharactersManager() {
       arcs: arcsText.split("\n").map((s) => s.trim()).filter(Boolean),
     }
     try {
-      if (editing) await updateCharacter(editing.id, payload)
-      else await createCharacter(payload)
+      if (editing) {
+        await updateCharacter(editing.id, payload)
+      } else {
+        await createCharacter(payload)
+      }
+      // Success ke baad sab clean reset karna zaroori hai
       setShowForm(false)
+      setForm({ ...empty })
+      setPowersText("")
+      setArcsText("")
+      setEditing(null)
+    } catch (err) {
+      console.error("Failed to save character:", err)
     } finally {
       setSaving(false)
     }
   }
 
   async function remove(id: string) {
-    if (confirm("Delete this character permanently?")) await deleteCharacter(id)
+    if (confirm("Delete this character permanently?")) {
+      try {
+        await deleteCharacter(id)
+      } catch (err) {
+        console.error("Failed to delete character:", err)
+      }
+    }
   }
 
   return (
@@ -73,9 +89,10 @@ export function CharactersManager() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-display text-xl font-bold text-foreground">Characters Manager</h2>
-          <p className="text-sm text-muted-foreground">{characters.length} characters in the universe</p>
+          <p className="text-sm text-muted-foreground">{characters.length} legendary characters in the vault</p>
         </div>
         <button
+          type="button"
           onClick={openCreate}
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow-red transition hover:brightness-110"
         >
@@ -84,12 +101,12 @@ export function CharactersManager() {
       </div>
 
       {showForm && (
-        <div className="glass space-y-5 rounded-xl p-6">
+        <div className="glass space-y-5 rounded-xl p-6 border border-border/60">
           <div className="flex items-center justify-between">
             <h3 className="font-display text-lg font-semibold text-foreground">
-              {editing ? "Edit Character" : "Add Character"}
+              {editing ? "✏️ Edit Character Profile" : "🔥 Add New Legend"}
             </h3>
-            <button onClick={() => setShowForm(false)} aria-label="Close form">
+            <button type="button" onClick={() => setShowForm(false)} aria-label="Close form">
               <X className="h-5 w-5 text-muted-foreground hover:text-foreground" />
             </button>
           </div>
@@ -97,32 +114,32 @@ export function CharactersManager() {
           <input
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="Character name"
+            placeholder="Character name (e.g., Zenith, Michael)"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
           <textarea
             value={form.bio}
             onChange={(e) => setForm({ ...form, bio: e.target.value })}
-            placeholder="Biography"
+            placeholder="Character Biography & Lore..."
             rows={4}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
           <input
             value={powersText}
             onChange={(e) => setPowersText(e.target.value)}
-            placeholder="Powers (comma separated)"
+            placeholder="Powers & Abilities (e.g., Divine Shadow, God Axe, Teleportation)"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
           <textarea
             value={arcsText}
             onChange={(e) => setArcsText(e.target.value)}
-            placeholder="Story arcs (one per line)"
+            placeholder="Story arcs involvement (one line per arc, e.g., Genesis of Destruction)"
             rows={3}
             className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
           />
 
           <div>
-            <p className="mb-2 text-sm font-medium text-foreground">Profile image</p>
+            <p className="mb-2 text-sm font-medium text-foreground">Profile Main Avatar</p>
             <ImageUploader
               folder="characters"
               multiple={false}
@@ -131,12 +148,12 @@ export function CharactersManager() {
             />
             {form.image && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.image || "/placeholder.svg"} alt="profile" className="mt-3 h-32 w-32 rounded-lg object-cover" />
+              <img src={form.image || "/placeholder.svg"} alt="profile" className="mt-3 h-32 w-32 rounded-lg object-cover border border-border/80 shadow-md" />
             )}
           </div>
 
           <div>
-            <p className="mb-2 text-sm font-medium text-foreground">Gallery ({form.gallery.length})</p>
+            <p className="mb-2 text-sm font-medium text-foreground">Character Gallery / Concept Art ({form.gallery.length})</p>
             <ImageUploader
               folder="characters/gallery"
               multiple
@@ -146,12 +163,13 @@ export function CharactersManager() {
             {form.gallery.length > 0 && (
               <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
                 {form.gallery.map((src, i) => (
-                  <div key={i} className="relative">
+                  <div key={i} className="relative group rounded border border-border overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src || "/placeholder.svg"} alt={`gallery ${i + 1}`} className="aspect-square w-full rounded object-cover" />
+                    <img src={src || "/placeholder.svg"} alt={`gallery ${i + 1}`} className="aspect-square w-full object-cover" />
                     <button
+                      type="button"
                       onClick={() => setForm((f) => ({ ...f, gallery: f.gallery.filter((_, idx) => idx !== i) }))}
-                      className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white"
+                      className="absolute right-0.5 top-0.5 rounded-full bg-black/70 p-0.5 text-white z-10"
                       aria-label="Remove image"
                     >
                       <X className="h-3 w-3" />
@@ -163,34 +181,40 @@ export function CharactersManager() {
           </div>
 
           <button
+            type="button"
             onClick={save}
             disabled={saving}
             className="inline-flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-foreground transition hover:brightness-110 disabled:opacity-50"
           >
-            <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Character"}
+            <Save className="h-4 w-4" /> {saving ? "Saving Custom Lore..." : "Save Character Profile"}
           </button>
         </div>
       )}
 
       <div className="grid gap-3 sm:grid-cols-2">
+        {characters.length === 0 && (
+          <p className="text-sm text-muted-foreground col-span-2 text-center py-4">No characters found in this universe tier.</p>
+        )}
         {characters.map((c) => (
-          <div key={c.id} className="glass flex items-center gap-4 rounded-xl p-3">
+          <div key={c.id} className="glass flex items-center gap-4 rounded-xl p-3 border border-border/40 hover:border-primary/30 transition-all">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={c.image || "/placeholder.svg?height=64&width=64&query=hero"}
               alt={c.name}
-              className="h-16 w-16 rounded-full object-cover"
+              className="h-16 w-16 rounded-full object-cover border-2 border-border"
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate font-semibold text-foreground">{c.name}</p>
-              <p className="truncate text-xs text-muted-foreground">{c.bio}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{c.likes || 0} likes</p>
+              <p className="truncate font-semibold text-foreground text-base">{c.name}</p>
+              <p className="truncate text-xs text-muted-foreground mt-0.5">{c.bio || "No lore added yet."}</p>
+              <p className="mt-1 text-[11px] text-accent font-medium bg-accent/10 px-2 py-0.5 rounded width-fit inline-block border border-accent/20">
+                ❤️ {c.likes || 0} Universe Likes
+              </p>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => openEdit(c)} className="rounded-lg border border-border p-2 hover:border-primary" aria-label="Edit">
+              <button type="button" onClick={() => openEdit(c)} className="rounded-lg border border-border p-2 bg-background/40 hover:border-primary/80 transition-colors" aria-label="Edit">
                 <Pencil className="h-4 w-4 text-foreground" />
               </button>
-              <button onClick={() => remove(c.id)} className="rounded-lg border border-border p-2 hover:border-primary" aria-label="Delete">
+              <button type="button" onClick={() => remove(c.id)} className="rounded-lg border border-border p-2 bg-background/40 hover:border-primary/80 transition-colors" aria-label="Delete">
                 <Trash2 className="h-4 w-4 text-primary" />
               </button>
             </div>
