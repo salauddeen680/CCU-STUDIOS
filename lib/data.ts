@@ -34,10 +34,13 @@ export function useComics() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setComics(
-          snap.docs.map((d) => {
-            const data = d.data()
-            // 🔄 SMART INTEGRATION: Agar timeline nahi hai par ultimate true hai toh 'purani', nahi toh default 'asli'
+        try {
+          const list = snap.docs.map((d) => {
+            const data = d.data() || {}
+            
+            // 🛡️ SAFETIES: Kisi bhi corrupted field par rendering exception block karne ke liye
+            const safeImages = Array.isArray(data.images) ? data.images : []
+            
             let assignedTimeline = data.timeline || "asli"
             if (!data.timeline && data.ultimate) {
               assignedTimeline = "purani"
@@ -45,19 +48,34 @@ export function useComics() {
             
             return { 
               id: d.id, 
-              ...data,
-              timeline: assignedTimeline
+              title: data.title || "Untitled Comic",
+              description: data.description || "",
+              cover: data.cover || "",
+              images: safeImages,
+              likes: typeof data.likes === "number" ? data.likes : 0,
+              timeline: assignedTimeline,
+              ultimate: !!data.ultimate,
+              createdAt: data.createdAt || Date.now()
             }
           }) as Comic[]
-        )
-        setLoading(false)
+          setComics(list)
+        } catch (err) {
+          console.error("Error mapping comics collection snapshot:", err)
+          setComics([])
+        } finally {
+          setLoading(false)
+        }
       },
-      () => setLoading(false)
+      (error) => {
+        console.error("Firestore useComics query error:", error)
+        setComics([])
+        setLoading(false)
+      }
     )
     return () => unsub()
   }, [])
 
-  return { comics, loading }
+  return { comics: comics || [], loading }
 }
 
 export function useCharacters() {
@@ -69,17 +87,35 @@ export function useCharacters() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setCharacters(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Character[]
-        )
-        setLoading(false)
+        try {
+          const list = snap.docs.map((d) => {
+            const data = d.data() || {}
+            return { 
+              id: d.id, 
+              name: data.name || "Unknown Character",
+              bio: data.bio || "",
+              image: data.image || "",
+              gallery: Array.isArray(data.gallery) ? data.gallery : [],
+              powers: Array.isArray(data.powers) ? data.powers : [],
+              arcs: Array.isArray(data.arcs) ? data.arcs : [],
+              likes: typeof data.likes === "number" ? data.likes : 0,
+              createdAt: data.createdAt || Date.now()
+            }
+          }) as Character[]
+          setCharacters(list)
+        } catch (err) {
+          console.error("Error mapping characters snapshot:", err)
+          setCharacters([])
+        } finally {
+          setLoading(false)
+        }
       },
       () => setLoading(false)
     )
     return () => unsub()
   }, [])
 
-  return { characters, loading }
+  return { characters: characters || [], loading }
 }
 
 export function useComic(id: string) {
@@ -89,17 +125,34 @@ export function useComic(id: string) {
   useEffect(() => {
     if (!id) return
     const unsub = onDocSnapshot(doc(db, "comics", id), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data()
-        let assignedTimeline = data.timeline || "asli"
-        if (!data.timeline && data.ultimate) {
-          assignedTimeline = "purani"
+      try {
+        if (snap.exists()) {
+          const data = snap.data() || {}
+          const safeImages = Array.isArray(data.images) ? data.images : []
+          let assignedTimeline = data.timeline || "asli"
+          if (!data.timeline && data.ultimate) {
+            assignedTimeline = "purani"
+          }
+          setComic({ 
+            id: snap.id, 
+            title: data.title || "Untitled Comic",
+            description: data.description || "",
+            cover: data.cover || "",
+            images: safeImages,
+            likes: data.likes || 0,
+            timeline: assignedTimeline, 
+            ultimate: !!data.ultimate,
+            createdAt: data.createdAt || Date.now()
+          } as Comic)
+        } else {
+          setComic(null)
         }
-        setComic({ id: snap.id, ...data, timeline: assignedTimeline } as Comic)
-      } else {
+      } catch (err) {
+        console.error("Error fetching single comic doc stream:", err)
         setComic(null)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     })
     return () => unsub()
   }, [id])
@@ -114,10 +167,29 @@ export function useCharacter(id: string) {
   useEffect(() => {
     if (!id) return
     const unsub = onDocSnapshot(doc(db, "characters", id), (snap) => {
-      setCharacter(
-        snap.exists() ? ({ id: snap.id, ...snap.data() } as Character) : null
-      )
-      setLoading(false)
+      try {
+        if (snap.exists()) {
+          const data = snap.data() || {}
+          setCharacter({
+            id: snap.id,
+            name: data.name || "",
+            bio: data.bio || "",
+            image: data.image || "",
+            gallery: Array.isArray(data.gallery) ? data.gallery : [],
+            powers: Array.isArray(data.powers) ? data.powers : [],
+            arcs: Array.isArray(data.arcs) ? data.arcs : [],
+            likes: data.likes || 0,
+            createdAt: data.createdAt || Date.now()
+          } as Character)
+        } else {
+          setCharacter(null)
+        }
+      } catch (err) {
+        console.error(err)
+        setCharacter(null)
+      } finally {
+        setLoading(false)
+      }
     })
     return () => unsub()
   }, [id])
@@ -138,19 +210,26 @@ export function useComments(parentId: string) {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const list = snap.docs.map(
-          (d) => ({ id: d.id, ...d.data() }) as Comment
-        )
-        list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-        setComments(list)
-        setLoading(false)
+        try {
+          const list = snap.docs.map((d) => {
+            const data = d.data() || {}
+            return { id: d.id, ...data } as Comment
+          })
+          list.sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
+          setComments(list)
+        } catch (err) {
+          console.error(err)
+          setComments([])
+        } finally {
+          setLoading(false)
+        }
       },
       () => setLoading(false)
     )
     return () => unsub()
   }, [parentId])
 
-  return { comments, loading }
+  return { comments: comments || [], loading }
 }
 
 export function useFooter() {
@@ -175,15 +254,21 @@ export function useAllComments() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setComments(snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Comment))
-        setLoading(false)
+        try {
+          setComments(snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }) as Comment))
+        } catch (err) {
+          console.error(err)
+          setComments([])
+        } finally {
+          setLoading(false)
+        }
       },
       () => setLoading(false)
     )
     return () => unsub()
   }, [])
 
-  return { comments, loading }
+  return { comments: comments || [], loading }
 }
 
 /* ------------------------------------------------------------------ */
