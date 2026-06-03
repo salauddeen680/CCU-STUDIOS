@@ -3,18 +3,17 @@
 import { useSearchParams } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { 
-  Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
-  MessageSquare, LogOut 
+  Loader2, Lock, BookOpen, UserSquare2, MessageSquare, LogOut 
 } from "lucide-react"
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
 
-// 📥 Hamare naye customized components ko safely import kiya hai
-import { ComicsManager } from "./components/comics-manager"
-import { CharactersManager } from "./components/characters-manager"
-import { EngagementPanel } from "./components/engagement-panel"
+// 📥 FIXED IMPORTS: Aliased root paths se direct link kiya hai taaki Vercel easily dhoondh sake
+import { ComicsManager } from "@/components/admin/comics-manager"
+import { CharactersManager } from "@/components/admin/characters-manager"
+import { EngagementPanel } from "@/components/admin/engagement-panel"
 
-// 🔐 Secure Configuration using Vercel Environment Variables — NO CHANGES
+// 🔐 Secure Configuration using Vercel Environment Variables — NO CHANGES AT ALL
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -39,7 +38,7 @@ function AdminGate() {
   const [loginError, setLoginError] = useState("")
   const [loginLoading, setLoginLoading] = useState(false)
 
-  // 🎛️ Dashboard Navigation States — Cleaned up for only useful views
+  // 🎛️ Dashboard Navigation States
   const [activeTab, setActiveTab] = useState("comics")
 
   useEffect(() => {
@@ -98,7 +97,7 @@ function AdminGate() {
           <form onSubmit={handleLogin} className="mt-8 space-y-5">
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Email Address</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="admin@ccustudios.com" />
+              <input type="email" required value={email} onChange={(e) => setEmail(e.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="admin@ccustudios.com" />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Password</label>
@@ -116,7 +115,7 @@ function AdminGate() {
   return (
     <div className="flex min-h-screen bg-zinc-950 text-zinc-100 font-sans">
       
-      {/* SIDEBAR NAVIGATION — Only containing the true functional items */}
+      {/* SIDEBAR NAVIGATION */}
       <aside className="w-64 border-r border-zinc-800 bg-zinc-900/40 p-6 flex flex-col justify-between shrink-0">
         <div className="space-y-8">
           <div>
@@ -162,24 +161,21 @@ function AdminGate() {
         </div>
       </aside>
 
-      {/* MAIN LAYOUT DASHBOARD — Connected perfectly with backend storage components */}
+      {/* MAIN LAYOUT DASHBOARD */}
       <main className="flex-1 p-10 overflow-y-auto">
         
-        {/* TAB: COMICS MANAGER (Real-time and Ultimate Dropdown Handling) */}
         {activeTab === "comics" && (
           <div className="space-y-4">
             <ComicsManager />
           </div>
         )}
 
-        {/* TAB: CHARACTERS MANAGER */}
         {activeTab === "characters" && (
           <div className="space-y-4">
             <CharactersManager />
           </div>
         )}
 
-        {/* TAB: ENGAGEMENT PANEL & LIKES ANALYTICS (Merged Cleanly) */}
         {activeTab === "engagement" && (
           <div className="space-y-4">
             <EngagementPanel />
