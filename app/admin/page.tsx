@@ -3,12 +3,13 @@
 import { useSearchParams } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { 
-  Loader2, Lock, BookOpen, UserSquare2, MessageSquare, LogOut 
+  Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
+  MessageSquare, LogOut 
 } from "lucide-react"
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
 
-// 📥 FIXED IMPORTS: Aliased root paths se direct link kiya hai taaki Vercel easily dhoondh sake
+// 📥 Hamare naye customized components ko safely import kiya hai
 import { ComicsManager } from "@/components/admin/comics-manager"
 import { CharactersManager } from "@/components/admin/characters-manager"
 import { EngagementPanel } from "@/components/admin/engagement-panel"
@@ -97,7 +98,7 @@ function AdminGate() {
           <form onSubmit={handleLogin} className="mt-8 space-y-5">
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Email Address</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="admin@ccustudios.com" />
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="admin@ccustudios.com" />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Password</label>
@@ -115,7 +116,7 @@ function AdminGate() {
   return (
     <div className="flex min-h-screen bg-zinc-950 text-zinc-100 font-sans">
       
-      {/* SIDEBAR NAVIGATION */}
+      {/* SIDEBAR NAVIGATION — Saare zaroori options aapke rules ke mutabik active hain */}
       <aside className="w-64 border-r border-zinc-800 bg-zinc-900/40 p-6 flex flex-col justify-between shrink-0">
         <div className="space-y-8">
           <div>
@@ -127,6 +128,7 @@ function AdminGate() {
             {[
               { id: "comics", label: "Comics Manager", icon: BookOpen },
               { id: "characters", label: "Characters Manager", icon: UserSquare2 },
+              { id: "ultimate", label: "Ultimate Comic", icon: LayoutDashboard },
               { id: "engagement", label: "Engagement Panel", icon: MessageSquare }
             ].map((tab) => {
               const Icon = tab.icon
@@ -164,18 +166,29 @@ function AdminGate() {
       {/* MAIN LAYOUT DASHBOARD */}
       <main className="flex-1 p-10 overflow-y-auto">
         
+        {/* TAB: COMICS MANAGER */}
         {activeTab === "comics" && (
           <div className="space-y-4">
             <ComicsManager />
           </div>
         )}
 
+        {/* TAB: CHARACTERS MANAGER */}
         {activeTab === "characters" && (
           <div className="space-y-4">
             <CharactersManager />
           </div>
         )}
 
+        {/* TAB: ULTIMATE COMIC (Aapka alag framework jo aapko alag chahiye tha) */}
+        {activeTab === "ultimate" && (
+          <div className="space-y-4">
+            {/* Yeh wahi comics manager load karega jahan hamare paas naya drop-down system hai */}
+            <ComicsManager />
+          </div>
+        )}
+
+        {/* TAB: ENGAGEMENT PANEL & LIKES ANALYTICS */}
         {activeTab === "engagement" && (
           <div className="space-y-4">
             <EngagementPanel />
