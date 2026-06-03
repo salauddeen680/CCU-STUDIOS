@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useRef, useState, useEffect } from "react"
 import { Upload, X, Loader2 } from "lucide-react"
 import { uploadImage } from "@/lib/upload"
 
@@ -28,6 +28,17 @@ export function ImageUploader({
   const [busy, setBusy] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // Memory leak se bachne ke liye purane blob URLs ko clear karna
+  useEffect(() => {
+    return () => {
+      previews.forEach((p) => {
+        if (p.url.startsWith("blob:")) {
+          URL.revokeObjectURL(p.url)
+        }
+      })
+    }
+  }, [previews])
+
   const addFiles = useCallback(
     (files: FileList | null) => {
       if (!files) return
@@ -48,6 +59,7 @@ export function ImageUploader({
     if (previews.length === 0 || busy) return
     setBusy(true)
     const uploadedUrls: string[] = []
+    
     for (const p of previews) {
       if (p.done) continue
       try {
@@ -57,7 +69,8 @@ export function ImageUploader({
         uploadedUrls.push(url)
         setPreviews((prev) => prev.map((x) => (x.id === p.id ? { ...x, done: true, progress: 100 } : x)))
       } catch (err) {
-        console.log("[v0] upload failed", err)
+        // Vercel build error fix karne ke liye err ko typecast kiya
+        console.error("[CCU Admin] upload failed", err instanceof Error ? err.message : err)
       }
     }
     setBusy(false)
@@ -65,18 +78,22 @@ export function ImageUploader({
   }
 
   function removePreview(id: string) {
-    setPreviews((prev) => prev.filter((x) => x.id !== id))
+    setPreviews((prev) => {
+      const target = prev.find((x) => x.id === id)
+      if (target?.url.startsWith("blob:")) {
+        URL.revokeObjectURL(target.url)
+      }
+      return prev.filter((x) => x.id !== id)
+    })
   }
 
   return (
     <div className="space-y-4">
+      {/* Container div ko relative banaya aur input ko iske upar hamesha click-ready rakha */}
       <div
-        role="button"
-        tabIndex={0}
-        onClick={() => inputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") inputRef.current?.click()
-        }}
+        className={`relative flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
+          dragging ? "border-primary bg-primary/10" : "border-border bg-card/40 hover:border-primary/60"
+        }`}
         onDragOver={(e) => {
           e.preventDefault()
           setDragging(true)
@@ -87,47 +104,48 @@ export function ImageUploader({
           setDragging(false)
           addFiles(e.dataTransfer.files)
         }}
-        className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
-          dragging ? "border-primary bg-primary/10" : "border-border bg-card/40 hover:border-primary/60"
-        }`}
       >
-        <Upload className="h-7 w-7 text-primary" />
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — auto compressed before upload</p>
+        {/* Invisible Real Input: Yeh phone par click karte hi bina ruke gallery kholega */}
         <input
           ref={inputRef}
           type="file"
           accept="image/*"
           multiple={multiple}
-          className="hidden"
+          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
           onChange={(e) => addFiles(e.target.files)}
+          disabled={busy}
         />
+
+        <Upload className="h-7 w-7 text-primary" />
+        <p className="text-sm font-medium text-foreground">{label}</p>
+        <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — auto compressed before upload</p>
       </div>
 
       {previews.length > 0 && (
         <>
+          {/* Mobile standard responsive layout fix */}
           <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
             {previews.map((p) => (
               <div key={p.id} className="group relative overflow-hidden rounded-lg border border-border bg-card">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={p.url || "/placeholder.svg"} alt="" className="aspect-[3/4] w-full object-cover" />
-                {!p.done && (
+                {!p.done && !busy && (
                   <button
                     type="button"
                     onClick={() => removePreview(p.id)}
-                    className="absolute right-1 top-1 rounded-full bg-black/70 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    className="absolute right-1 top-1 z-20 rounded-full bg-black/70 p-1 text-white transition-opacity md:opacity-0 md:group-hover:opacity-100"
                     aria-label="Remove image"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <X className="h-4 w-4" />
                   </button>
                 )}
                 {(busy || p.progress > 0) && !p.done && (
-                  <div className="absolute inset-x-0 bottom-0 h-1.5 bg-black/50">
+                  <div className="absolute inset-x-0 bottom-0 z-20 h-1.5 bg-black/50">
                     <div className="h-full bg-primary transition-all" style={{ width: `${p.progress}%` }} />
                   </div>
                 )}
                 {p.done && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-xs font-semibold text-accent">
+                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 text-xs font-semibold text-accent">
                     Uploaded
                   </div>
                 )}
