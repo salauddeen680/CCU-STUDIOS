@@ -35,7 +35,20 @@ export function useComics() {
       q,
       (snap) => {
         setComics(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() })) as Comic[]
+          snap.docs.map((d) => {
+            const data = d.data()
+            // 🔄 SMART INTEGRATION: Agar timeline nahi hai par ultimate true hai toh 'purani', nahi toh default 'asli'
+            let assignedTimeline = data.timeline || "asli"
+            if (!data.timeline && data.ultimate) {
+              assignedTimeline = "purani"
+            }
+            
+            return { 
+              id: d.id, 
+              ...data,
+              timeline: assignedTimeline
+            }
+          }) as Comic[]
         )
         setLoading(false)
       },
@@ -76,7 +89,16 @@ export function useComic(id: string) {
   useEffect(() => {
     if (!id) return
     const unsub = onDocSnapshot(doc(db, "comics", id), (snap) => {
-      setComic(snap.exists() ? ({ id: snap.id, ...snap.data() } as Comic) : null)
+      if (snap.exists()) {
+        const data = snap.data()
+        let assignedTimeline = data.timeline || "asli"
+        if (!data.timeline && data.ultimate) {
+          assignedTimeline = "purani"
+        }
+        setComic({ id: snap.id, ...data, timeline: assignedTimeline } as Comic)
+      } else {
+        setComic(null)
+      }
       setLoading(false)
     })
     return () => unsub()
