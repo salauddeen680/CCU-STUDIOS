@@ -134,7 +134,6 @@ function AdminGate() {
       <p className="text-zinc-400">Logged in as: {user.email}</p>
       <div className="mt-8 p-6 border border-zinc-800 rounded-xl bg-zinc-900/40">
         <p className="text-sm text-zinc-500">Database connection: Active (Firebase Auth Online)</p>
-        {/* Yahan aapka purana dashboard content automatic link ho jayega */}
       </div>
     </div>
   )
