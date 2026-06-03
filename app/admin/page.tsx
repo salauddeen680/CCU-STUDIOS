@@ -10,14 +10,14 @@ import {
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
 
-// 🔐 Screenshot 1000038261.jpg Se Li Hui 100% Sahi 6-Keys Configuration
+// 🔐 Secure Configuration using Vercel Environment Variables
 const firebaseConfig = {
-  apiKey: "AIzaSyD_7DzxupNXrmXyDsnTtFdbtod4oybkEfA",
-  authDomain: "ccu-studios.firebaseapp.com",
-  projectId: "ccu-studios",
-  storageBucket: "ccu-studios.firebasestorage.app",
-  messagingSenderId: "359808133294",
-  appId: "1:359808133294:web:eb1e9ce3c0ca0664d3e53f"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 }
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
