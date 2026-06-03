@@ -3,12 +3,12 @@
 import { useState, useRef } from "react"
 import { Upload, Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react"
 import { useComics, createComic, deleteComic } from "@/lib/data"
-import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage" // ⚡ Memory leak aur freezing rokne ke liye simple uploadBytes use kiya hai
 import { storage } from "@/lib/firebase"
 import type { Comic } from "@/lib/types"
 
 export function ComicsManager() {
-  const { comics, loading: dataLoading } = useComics()
+  const { comics = [], loading: dataLoading } = useComics()
   const [isOpen, setIsOpen] = useState(false)
   
   // Form States
@@ -27,7 +27,7 @@ export function ComicsManager() {
   const coverInputRef = useRef<HTMLInputElement>(null)
   const pagesInputRef = useRef<HTMLInputElement>(null)
 
-  // 🎯 1. COVER IMAGE UPLOAD (Ekdum Immediate aur Fast)
+  // 🎯 1. COVER IMAGE UPLOAD
   const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -36,50 +36,48 @@ export function ComicsManager() {
     const storageRef = ref(storage, `covers/${Date.now()}_${file.name}`)
     
     try {
-      const uploadTask = await uploadBytesResumable(storageRef, file)
-      const url = await getDownloadURL(uploadTask.ref)
+      const snapshot = await uploadBytes(storageRef, file)
+      const url = await getDownloadURL(snapshot.ref)
       setCoverUrl(url)
     } catch (err) {
       console.error("Cover Upload Error:", err)
-      alert("Cover upload fail ho gaya. Kripya dobara koshish karein.")
+      alert("Cover upload fail ho gaya.")
     } finally {
       setCoverUploading(false)
     }
   }
 
-  // 🚀 2. BULK COMIC PAGES UPLOAD (Parrallel Async Processing - No More Freeze!)
+  // 🚀 2. BULK COMIC PAGES UPLOAD (For-Of Loop Safety - No More Mobile Freeze!)
   const handlePagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
     setPagesUploading(true)
     const fileArray = Array.from(files)
-    const uploadedUrls: string[] = new Array(fileArray.length)
+    const tempUrls: string[] = []
     
     setUploadProgress(`Processing 0/${fileArray.length} pages...`)
 
     try {
-      // Saari images ko ek sath parallel bhej rahe hain taaki phone freeze na ho
-      await Promise.all(
-        fileArray.map(async (file, index) => {
-          const storageRef = ref(storage, `pages/${Date.now()}_index_${index}_${file.name}`)
-          const uploadTask = await uploadBytesResumable(storageRef, file)
-          const url = await getDownloadURL(uploadTask.ref)
-          uploadedUrls[index] = url
-          
-          // Real-time progress count setting
-          const doneCount = uploadedUrls.filter(Boolean).length
-          setUploadProgress(`Uploading ${doneCount}/${fileArray.length} pages...`)
-        })
-      )
+      // 🛡️ CRASH FIX: Promise.all hata kar simple sequential loop banaya hai.
+      // Mobile browsers ek saath 21 heavy uploads ke parallel threads nahi jhel paate aur crash ho jaate hain.
+      // Yeh loop ek-ek karke fast pipeline mein safely upload karega bina RAM block kiye.
+      let count = 0
+      for (const file of fileArray) {
+        count++
+        setUploadProgress(`Uploading page ${count}/${fileArray.length}...`)
+        
+        const storageRef = ref(storage, `pages/${Date.now()}_idx_${count}_${file.name}`)
+        const snapshot = await uploadBytes(storageRef, file)
+        const url = await getDownloadURL(snapshot.ref)
+        tempUrls.push(url)
+      }
 
-      // Filter out any failed uploads and append to state cleanly
-      const validUrls = uploadedUrls.filter((url) => url !== undefined)
-      setPageUrls((prev) => [...prev, ...validUrls])
+      setPageUrls((prev) => [...prev, ...tempUrls])
       setUploadProgress("All pages uploaded successfully!")
     } catch (err) {
       console.error("Bulk Pages Upload Error:", err)
-      alert("Kuch pages upload nahi ho paye. Kripya network check karke dubara try karein.")
+      alert("Kuch pages fail ho gaye. Network check karein.")
     } finally {
       setPagesUploading(false)
     }
@@ -98,12 +96,11 @@ export function ComicsManager() {
         title,
         description,
         timeline,
-        cover: coverUrl || undefined,
+        cover: coverUrl || "",
         images: pageUrls,
-        ultimate: timeline === "purani" ? true : false
+        ultimate: timeline === "purani"
       })
 
-      // Form reset clear code
       setTitle("")
       setDescription("")
       setCoverUrl("")
@@ -113,7 +110,7 @@ export function ComicsManager() {
       alert("Comic Successfully Vault Mein Save Ho Gayi Hai! 🎉")
     } catch (err) {
       console.error("Save Comic Error:", err)
-      alert("Database mein save karte waqt error aaya.")
+      alert("Database error aaya.")
     } finally {
       setIsSaving(false)
     }
@@ -125,9 +122,10 @@ export function ComicsManager() {
       <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-white">Comics Manager</h1>
-          <p className="text-sm text-zinc-500">{comics.length} comics in the vault</p>
+          <p className="text-sm text-zinc-500">{(comics || []).length} comics in the vault</p>
         </div>
         <button 
+          type="button"
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all"
         >
@@ -176,6 +174,7 @@ export function ComicsManager() {
               <label className="text-xs font-semibold text-zinc-400 uppercase">Cover Image</label>
               <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={handleCoverUpload} />
               <button 
+                type="button"
                 onClick={() => coverInputRef.current?.click()}
                 disabled={coverUploading}
                 className="w-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 hover:border-red-600/40 bg-zinc-950 p-6 rounded-lg group transition-all"
@@ -195,6 +194,7 @@ export function ComicsManager() {
               <label className="text-xs font-semibold text-zinc-400 uppercase">Comic pages ({pageUrls.length})</label>
               <input type="file" accept="image/*" multiple ref={pagesInputRef} className="hidden" onChange={handlePagesUpload} />
               <button 
+                type="button"
                 onClick={() => pagesInputRef.current?.click()}
                 disabled={pagesUploading}
                 className="w-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 hover:border-red-600/40 bg-zinc-950 p-6 rounded-lg group transition-all"
@@ -211,6 +211,7 @@ export function ComicsManager() {
 
             {/* ACTION SAVE CONTROLLER BUTTON */}
             <button 
+              type="button"
               onClick={handleSaveComic}
               disabled={isSaving || coverUploading || pagesUploading}
               className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-800 text-white text-xs font-bold py-3 rounded-lg transition-all uppercase tracking-wider flex items-center justify-center gap-2"
@@ -233,7 +234,7 @@ export function ComicsManager() {
         
         {dataLoading ? (
           <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-red-600" /></div>
-        ) : comics.length === 0 ? (
+        ) : !comics || comics.length === 0 ? (
           <p className="text-xs text-zinc-600 text-center py-4">No comics found in this timeline branch.</p>
         ) : (
           <div className="divide-y divide-zinc-800">
@@ -252,6 +253,7 @@ export function ComicsManager() {
                     {comic.timeline || "asli"} Timeline
                   </span>
                   <button 
+                    type="button"
                     onClick={async () => {
                       if(confirm("Kya aap sach me is comic ko clear karna chahte hain?")) {
                         await deleteComic(comic.id)
