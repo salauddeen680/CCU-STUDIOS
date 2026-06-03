@@ -5,7 +5,8 @@ export type Comic = {
   cover?: string
   images: string[]
   likes: number
-  ultimate?: boolean
+  ultimate?: boolean  // Purane data ke compatibility ke liye rakha hai
+  timeline?: string   // 🔥 NAYA: "asli", "purani", ya "dusri" ko support karne ke liye
   createdAt?: number
 }
 
