@@ -1,169 +1,272 @@
 "use client"
 
-import { useCallback, useRef, useState, useEffect } from "react"
-import { Upload, X, Loader2 } from "lucide-react"
-import { uploadImage } from "@/lib/upload"
+import { useState, useRef } from "react"
+import { Upload, Plus, Trash2, Loader2, CheckCircle2 } from "lucide-react"
+import { useComics, createComic, deleteComic } from "@/lib/data"
+import { ref, uploadBytesResumable, getDownloadURL } from "firebase/storage"
+import { storage } from "@/lib/firebase"
+import type { Comic } from "@/lib/types"
 
-type Preview = {
-  id: string
-  file: File
-  url: string
-  progress: number
-  done: boolean
-}
+export function ComicsManager() {
+  const { comics, loading: dataLoading } = useComics()
+  const [isOpen, setIsOpen] = useState(false)
+  
+  // Form States
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState("")
+  const [timeline, setTimeline] = useState("asli")
+  const [isSaving, setIsSaving] = useState(false)
 
-export function ImageUploader({
-  folder,
-  multiple = true,
-  onUploaded,
-  label = "Drag & drop images here",
-}: {
-  folder: string
-  multiple?: boolean
-  onUploaded: (urls: string[]) => void
-  label?: string
-}) {
-  const [previews, setPreviews] = useState<Preview[]>([])
-  const [dragging, setDragging] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  // Upload Tracking States
+  const [coverUrl, setCoverUrl] = useState("")
+  const [pageUrls, setPageUrls] = useState<string[]>([])
+  const [coverUploading, setCoverUploading] = useState(false)
+  const [pagesUploading, setPagesUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState("")
 
-  // Memory leak se bachne ke liye purane blob URLs ko clear karna
-  useEffect(() => {
-    return () => {
-      previews.forEach((p) => {
-        if (p.url.startsWith("blob:")) {
-          URL.revokeObjectURL(p.url)
-        }
-      })
-    }
-  }, [previews])
+  const coverInputRef = useRef<HTMLInputElement>(null)
+  const pagesInputRef = useRef<HTMLInputElement>(null)
 
-  const addFiles = useCallback(
-    (files: FileList | null) => {
-      if (!files) return
-      const list = Array.from(files).filter((f) => f.type.startsWith("image/"))
-      const next = list.map((file) => ({
-        id: `${file.name}-${file.size}-${Math.random().toString(36).slice(2)}`,
-        file,
-        url: URL.createObjectURL(file),
-        progress: 0,
-        done: false,
-      }))
-      setPreviews((prev) => (multiple ? [...prev, ...next] : next.slice(0, 1)))
-    },
-    [multiple],
-  )
+  // 🎯 1. COVER IMAGE UPLOAD (Ekdum Immediate aur Fast)
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
 
-  async function startUpload() {
-    if (previews.length === 0 || busy) return
-    setBusy(true)
-    const uploadedUrls: string[] = []
+    setCoverUploading(true)
+    const storageRef = ref(storage, `covers/${Date.now()}_${file.name}`)
     
-    for (const p of previews) {
-      if (p.done) continue
-      try {
-        const url = await uploadImage(p.file, folder, (progress) => {
-          setPreviews((prev) => prev.map((x) => (x.id === p.id ? { ...x, progress } : x)))
-        })
-        uploadedUrls.push(url)
-        setPreviews((prev) => prev.map((x) => (x.id === p.id ? { ...x, done: true, progress: 100 } : x)))
-      } catch (err) {
-        // Vercel build error fix karne ke liye err ko typecast kiya
-        console.error("[CCU Admin] upload failed", err instanceof Error ? err.message : err)
-      }
+    try {
+      const uploadTask = await uploadBytesResumable(storageRef, file)
+      const url = await getDownloadURL(uploadTask.ref)
+      setCoverUrl(url)
+    } catch (err) {
+      console.error("Cover Upload Error:", err)
+      alert("Cover upload fail ho gaya. Kripya dobara koshish karein.")
+    } finally {
+      setCoverUploading(false)
     }
-    setBusy(false)
-    if (uploadedUrls.length) onUploaded(uploadedUrls)
   }
 
-  function removePreview(id: string) {
-    setPreviews((prev) => {
-      const target = prev.find((x) => x.id === id)
-      if (target?.url.startsWith("blob:")) {
-        URL.revokeObjectURL(target.url)
-      }
-      return prev.filter((x) => x.id !== id)
-    })
+  // 🚀 2. BULK COMIC PAGES UPLOAD (Parrallel Async Processing - No More Freeze!)
+  const handlePagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setPagesUploading(true)
+    const fileArray = Array.from(files)
+    const uploadedUrls: string[] = new Array(fileArray.length)
+    
+    setUploadProgress(`Processing 0/${fileArray.length} pages...`)
+
+    try {
+      // Saari images ko ek sath parallel bhej rahe hain taaki phone freeze na ho
+      await Promise.all(
+        fileArray.map(async (file, index) => {
+          const storageRef = ref(storage, `pages/${Date.now()}_index_${index}_${file.name}`)
+          const uploadTask = await uploadBytesResumable(storageRef, file)
+          const url = await getDownloadURL(uploadTask.ref)
+          uploadedUrls[index] = url
+          
+          // Real-time progress count setting
+          const doneCount = uploadedUrls.filter(Boolean).length
+          setUploadProgress(`Uploading ${doneCount}/${fileArray.length} pages...`)
+        })
+      )
+
+      // Filter out any failed uploads and append to state cleanly
+      const validUrls = uploadedUrls.filter((url) => url !== undefined)
+      setPageUrls((prev) => [...prev, ...validUrls])
+      setUploadProgress("All pages uploaded successfully!")
+    } catch (err) {
+      console.error("Bulk Pages Upload Error:", err)
+      alert("Kuch pages upload nahi ho paye. Kripya network check karke dubara try karein.")
+    } finally {
+      setPagesUploading(false)
+    }
+  }
+
+  // 💾 3. SAVE FINAL COMIC NODE TO FIRESTORE
+  const handleSaveComic = async () => {
+    if (!title.trim() || !description.trim()) {
+      alert("Title aur Description daalna zaroori hai bhai!")
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      await createComic({
+        title,
+        description,
+        timeline,
+        cover: coverUrl || undefined,
+        images: pageUrls,
+        ultimate: timeline === "purani" ? true : false
+      })
+
+      // Form reset clear code
+      setTitle("")
+      setDescription("")
+      setCoverUrl("")
+      setPageUrls([])
+      setUploadProgress("")
+      setIsOpen(false)
+      alert("Comic Successfully Vault Mein Save Ho Gayi Hai! 🎉")
+    } catch (err) {
+      console.error("Save Comic Error:", err)
+      alert("Database mein save karte waqt error aaya.")
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
-    <div className="space-y-4">
-      {/* Container div ko relative banaya aur input ko iske upar hamesha click-ready rakha */}
-      <div
-        className={`relative flex min-h-[160px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors ${
-          dragging ? "border-primary bg-primary/10" : "border-border bg-card/40 hover:border-primary/60"
-        }`}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragging(false)
-          addFiles(e.dataTransfer.files)
-        }}
-      >
-        {/* Invisible Real Input: Yeh phone par click karte hi bina ruke gallery kholega */}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple={multiple}
-          className="absolute inset-0 z-10 h-full w-full cursor-pointer opacity-0"
-          onChange={(e) => addFiles(e.target.files)}
-          disabled={busy}
-        />
-
-        <Upload className="h-7 w-7 text-primary" />
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        <p className="text-xs text-muted-foreground">PNG, JPG, WEBP — auto compressed before upload</p>
+    <div className="space-y-6">
+      {/* HEADER BAR */}
+      <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Comics Manager</h1>
+          <p className="text-sm text-zinc-500">{comics.length} comics in the vault</p>
+        </div>
+        <button 
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition-all"
+        >
+          <Plus className="h-4 w-4" /> {isOpen ? "Close Creator" : "New Comic"}
+        </button>
       </div>
 
-      {previews.length > 0 && (
-        <>
-          {/* Mobile standard responsive layout fix */}
-          <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-6">
-            {previews.map((p) => (
-              <div key={p.id} className="group relative overflow-hidden rounded-lg border border-border bg-card">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.url || "/placeholder.svg"} alt="" className="aspect-[3/4] w-full object-cover" />
-                {!p.done && !busy && (
-                  <button
-                    type="button"
-                    onClick={() => removePreview(p.id)}
-                    className="absolute right-1 top-1 z-20 rounded-full bg-black/70 p-1 text-white transition-opacity md:opacity-0 md:group-hover:opacity-100"
-                    aria-label="Remove image"
+      {/* DYNAMIC CREATOR FORM MODAL OVERLAY SHEET */}
+      {isOpen && (
+        <div className="border border-zinc-800 bg-zinc-900/40 p-6 rounded-xl space-y-5 max-w-2xl">
+          <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-wider">Create Comic</h2>
+          
+          <div className="space-y-4">
+            <input 
+              type="text" 
+              placeholder="Comic Title (e.g. Zenith: the divine shadow 1)" 
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-600" 
+            />
+            
+            <textarea 
+              placeholder="Write descriptive cosmic lore summary..." 
+              rows={4} 
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-red-600 resize-none" 
+            />
+
+            {/* TIMELINE DROPDOWN SELECTION */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase">Select Comic Timeline / Universe</label>
+              <select 
+                value={timeline}
+                onChange={(e) => setTimeline(e.target.value)}
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-300 focus:outline-none focus:border-red-600"
+              >
+                <option value="asli">🟢 Asli Timeline (Real-Time Stories)</option>
+                <option value="purani">🟡 Purani Timeline / Backstory (Ultimate Comic)</option>
+                <option value="dusri">🔴 Dusri Universe / Fan Fiction</option>
+              </select>
+            </div>
+
+            {/* COVER IMAGE INPUT COMPONENT */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase">Cover Image</label>
+              <input type="file" accept="image/*" ref={coverInputRef} className="hidden" onChange={handleCoverUpload} />
+              <button 
+                onClick={() => coverInputRef.current?.click()}
+                disabled={coverUploading}
+                className="w-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 hover:border-red-600/40 bg-zinc-950 p-6 rounded-lg group transition-all"
+              >
+                {coverUploading ? (
+                  <Loader2 className="h-6 w-6 text-red-500 animate-spin mb-1" />
+                ) : (
+                  <Upload className="h-6 w-6 text-zinc-600 group-hover:text-red-500 mb-1" />
+                )}
+                <span className="text-xs text-zinc-400">{coverUploading ? "Uploading cover..." : "Upload cover"}</span>
+              </button>
+              {coverUrl && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> Cover attached successfully!</p>}
+            </div>
+
+            {/* BULK COMIC PAGES INPUT COMPONENT */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase">Comic pages ({pageUrls.length})</label>
+              <input type="file" accept="image/*" multiple ref={pagesInputRef} className="hidden" onChange={handlePagesUpload} />
+              <button 
+                onClick={() => pagesInputRef.current?.click()}
+                disabled={pagesUploading}
+                className="w-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 hover:border-red-600/40 bg-zinc-950 p-6 rounded-lg group transition-all"
+              >
+                {pagesUploading ? (
+                  <Loader2 className="h-6 w-6 text-red-500 animate-spin mb-1" />
+                ) : (
+                  <Upload className="h-6 w-6 text-zinc-600 group-hover:text-red-500 mb-1" />
+                )}
+                <span className="text-xs text-zinc-400">{pagesUploading ? uploadProgress : "Upload comic pages (Bulk 15-25 pages)"}</span>
+              </button>
+              {pageUrls.length > 0 && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages queued in temporary cloud grid!</p>}
+            </div>
+
+            {/* ACTION SAVE CONTROLLER BUTTON */}
+            <button 
+              onClick={handleSaveComic}
+              disabled={isSaving || coverUploading || pagesUploading}
+              className="w-full bg-red-600 hover:bg-red-700 disabled:bg-zinc-800 text-white text-xs font-bold py-3 rounded-lg transition-all uppercase tracking-wider flex items-center justify-center gap-2"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Saving Comic Core Node...
+                </>
+              ) : (
+                "Save and Publish Comic"
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* DATABASE ROSTER LIST HUB */}
+      <div className="border border-zinc-800 bg-zinc-900/20 rounded-xl p-6">
+        <h3 className="text-sm font-bold text-zinc-300 mb-4 uppercase tracking-wider">Active Vault Inventory</h3>
+        
+        {dataLoading ? (
+          <div className="flex justify-center p-4"><Loader2 className="h-6 w-6 animate-spin text-red-600" /></div>
+        ) : comics.length === 0 ? (
+          <p className="text-xs text-zinc-600 text-center py-4">No comics found in this timeline branch.</p>
+        ) : (
+          <div className="divide-y divide-zinc-800">
+            {comics.map((comic) => (
+              <div key={comic.id} className="py-3 flex justify-between items-center first:pt-0 last:pb-0">
+                <div>
+                  <h4 className="text-sm font-bold text-white">{comic.title}</h4>
+                  <p className="text-xs text-zinc-500">Pages Count: {comic.images?.length || 0} • Likes: {comic.likes || 0}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                    comic.timeline === "asli" ? "bg-green-950 text-green-400 border border-green-900" :
+                    comic.timeline === "purani" ? "bg-amber-950 text-amber-400 border border-amber-900" :
+                    "bg-red-950 text-red-400 border border-red-900"
+                  }`}>
+                    {comic.timeline || "asli"} Timeline
+                  </span>
+                  <button 
+                    onClick={async () => {
+                      if(confirm("Kya aap sach me is comic ko clear karna chahte hain?")) {
+                        await deleteComic(comic.id)
+                      }
+                    }}
+                    className="text-zinc-600 hover:text-red-500 transition-all"
                   >
-                    <X className="h-4 w-4" />
+                    <Trash2 className="h-4 w-4" />
                   </button>
-                )}
-                {(busy || p.progress > 0) && !p.done && (
-                  <div className="absolute inset-x-0 bottom-0 z-20 h-1.5 bg-black/50">
-                    <div className="h-full bg-primary transition-all" style={{ width: `${p.progress}%` }} />
-                  </div>
-                )}
-                {p.done && (
-                  <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/50 text-xs font-semibold text-accent">
-                    Uploaded
-                  </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
-
-          <button
-            type="button"
-            onClick={startUpload}
-            disabled={busy || previews.every((p) => p.done)}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow-red transition hover:brightness-110 disabled:opacity-50"
-          >
-            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
-            {busy ? "Uploading..." : `Upload ${previews.filter((p) => !p.done).length} image(s)`}
-          </button>
-        </>
-      )}
+        )}
+      </div>
     </div>
   )
 }
