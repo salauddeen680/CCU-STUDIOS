@@ -26,6 +26,10 @@ export const metadata: Metadata = {
     description: "Read premium comics and explore the CCU character universe.",
     type: "website",
   },
+  // 🔐 Google Search Console Verification Tag Added Safely Here
+  verification: {
+    google: "XXO_Zb9ewdf1cBmv-LqID5RdX-oPzpjuyMZ2ApSUuyM",
+  },
 }
 
 export const viewport: Viewport = {
