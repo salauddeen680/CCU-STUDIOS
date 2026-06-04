@@ -1,69 +1,79 @@
-"use client"
+"use client";
 
-import { useState, useRef } from "react"
-import { Plus, Trash2, Loader2, Upload, CheckCircle2 } from "lucide-react"
-import { useComics, createComic, deleteComic } from "@/lib/data"
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
-import { storage } from "@/lib/firebase"
-import { ImageUploader } from "./image-uploader"
+import { useState, useRef } from "react";
+import { Plus, Trash2, Loader2, Upload, CheckCircle2 } from "lucide-react";
+import { useComics, createComic, deleteComic } from "@/lib/data";
+import { ImageUploader } from "./image-uploader";
 
 export function ComicsManager() {
-  const { comics = [], loading: dataLoading } = useComics()
-  const [isOpen, setIsOpen] = useState(false)
+  const { comics = [], loading: dataLoading } = useComics();
+  const [isOpen, setIsOpen] = useState(false);
   
   // Form Control Inputs
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
-  const [timeline, setTimeline] = useState("asli")
-  const [isSaving, setIsSaving] = useState(false)
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [timeline, setTimeline] = useState("asli");
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [coverUrl, setCoverUrl] = useState("")
-  const [pageUrls, setPageUrls] = useState<string[]>([])
-  const [pagesUploading, setPagesUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState("")
+  const [coverUrl, setCoverUrl] = useState("");
+  const [pageUrls, setPageUrls] = useState<string[]>([]);
+  const [pagesUploading, setPagesUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
 
-  const pagesInputRef = useRef<HTMLInputElement>(null)
+  const pagesInputRef = useRef<HTMLInputElement>(null);
 
-  // Pages Loop for Mobile Stability Grid Pipeline
+  // Updated Imgbb Loop Pipeline
   const handlePagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files || files.length === 0) return
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    setPagesUploading(true)
-    const fileArray = Array.from(files)
-    const tempUrls: string[] = []
+    setPagesUploading(true);
+    const fileArray = Array.from(files);
+    const tempUrls: string[] = [];
     
-    setUploadProgress(`Processing 0/${fileArray.length} pages...`)
+    setUploadProgress(`Processing 0/${fileArray.length} pages...`);
 
     try {
-      let count = 0
+      let count = 0;
       for (const file of fileArray) {
-        count++
-        setUploadProgress(`Uploading page ${count}/${fileArray.length}...`)
+        count++;
+        setUploadProgress(`Uploading page ${count}/${fileArray.length}...`);
         
-        const storageRef = ref(storage, `pages/${Date.now()}_idx_${count}_${file.name}`)
-        const snapshot = await uploadBytes(storageRef, file)
-        const url = await getDownloadURL(snapshot.ref)
-        tempUrls.push(url)
+        const formData = new FormData();
+        formData.append("image", file);
+
+        // 🚀 Imgbb API Integration
+        const res = await fetch("https://api.imgbb.com/1/upload?key=316329635816225ced11f24f7cb154d3", {
+          method: "POST",
+          body: formData,
+        });
+
+        const resData = await res.json();
+
+        if (resData.success) {
+          tempUrls.push(resData.data.url);
+        } else {
+          throw new Error(`Failed at page ${count}`);
+        }
       }
 
-      setPageUrls((prev) => [...prev, ...tempUrls])
-      setUploadProgress("All pages uploaded successfully!")
+      setPageUrls((prev) => [...prev, ...tempUrls]);
+      setUploadProgress("All pages uploaded successfully!");
     } catch (err) {
-      console.error(err)
-      alert("Kuch pages uploads fail ho gaye.")
+      console.error(err);
+      alert("Kuch pages uploads fail ho gaye bhai.");
     } finally {
-      setPagesUploading(false)
+      setPagesUploading(false);
     }
-  }
+  };
 
   const handleSaveComic = async () => {
     if (!title.trim() || !description.trim()) {
-      alert("Title aur Description dena zaroori hai bhai!")
-      return
+      alert("Title aur Description dena zaroori hai bhai!");
+      return;
     }
 
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       await createComic({
         title,
@@ -72,22 +82,22 @@ export function ComicsManager() {
         cover: coverUrl || "",
         images: pageUrls,
         ultimate: timeline === "purani"
-      })
+      });
 
-      setTitle("")
-      setDescription("")
-      setCoverUrl("")
-      setPageUrls([])
-      setUploadProgress("")
-      setIsOpen(false)
-      alert("Comic Published Successfully! 🎉")
+      setTitle("");
+      setDescription("");
+      setCoverUrl("");
+      setPageUrls([]);
+      setUploadProgress("");
+      setIsOpen(false);
+      alert("Comic Published Successfully! 🎉");
     } catch (err) {
-      console.error(err)
-      alert("Database error.")
+      console.error(err);
+      alert("Database error.");
     } finally {
-      setIsSaving(false)
+      setIsSaving(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -131,7 +141,6 @@ export function ComicsManager() {
             </select>
           </div>
 
-          {/* Connected with updated atomic uploader */}
           <ImageUploader 
             label="Cover Image" 
             folder="covers" 
@@ -181,5 +190,5 @@ export function ComicsManager() {
         </div>
       </div>
     </div>
-  )
+  );
 }
