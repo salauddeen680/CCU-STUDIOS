@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Trash2, Loader2, Upload, CheckCircle2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Upload, CheckCircle2, X } from "lucide-react";
 import { useComics, createComic, deleteComic } from "@/lib/data";
 import { ImageUploader } from "./image-uploader";
 
@@ -42,7 +42,6 @@ export function ComicsManager() {
         const formData = new FormData();
         formData.append("image", file);
 
-        // 🚀 Imgbb API Integration
         const res = await fetch("https://api.imgbb.com/1/upload?key=316329635816225ced11f24f7cb154d3", {
           method: "POST",
           body: formData,
@@ -146,6 +145,9 @@ export function ComicsManager() {
             folder="covers" 
             onUploadComplete={(url) => setCoverUrl(url)} 
           />
+          {coverUrl && (
+            <img src={coverUrl} alt="Cover Preview" className="mt-2 h-32 w-24 object-cover rounded-lg border border-zinc-800" />
+          )}
 
           <div className="space-y-2">
             <label className="text-xs font-semibold text-zinc-400 uppercase">Comic pages ({pageUrls.length})</label>
@@ -154,7 +156,28 @@ export function ComicsManager() {
               {pagesUploading ? <Loader2 className="h-5 w-5 animate-spin text-red-500" /> : `Upload Comic Pages Bulk`}
             </button>
             {pagesUploading && <p className="text-xs text-zinc-500">{uploadProgress}</p>}
-            {pageUrls.length > 0 && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages ready!</p>}
+            {pageUrls.length > 0 && (
+              <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages ready!</p>
+            )}
+
+            {/* 🔥 Naya Preview Grid: Yeh uploaded comic pages ko live dikhayega */}
+            {pageUrls.length > 0 && (
+              <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+                {pageUrls.map((src, i) => (
+                  <div key={i} className="relative group rounded border border-zinc-800 overflow-hidden bg-zinc-950">
+                    <img src={src} alt={`Page ${i + 1}`} className="aspect-[3/4] w-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setPageUrls((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="absolute right-1 top-1 rounded-full bg-black/80 p-1 text-zinc-400 hover:text-white transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                    <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 px-1 text-zinc-300 rounded">P. {i + 1}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <button onClick={handleSaveComic} disabled={isSaving || pagesUploading} className="w-full bg-red-600 text-white text-xs font-bold py-3 rounded-lg uppercase tracking-wider flex items-center justify-center gap-2">
