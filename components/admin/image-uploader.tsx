@@ -1,4 +1,4 @@
-"use client"
+"useclient"
 ​import { useState, useRef } from "react"
 import { Upload, Loader2, CheckCircle2 } from "lucide-react"
 ​interface ImageUploaderProps {
