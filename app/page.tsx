@@ -1,18 +1,35 @@
 import { SiteShell } from "@/components/site-shell"
 import { Hero } from "@/components/hero"
 import ComicSlider from "@/components/ComicSlider"
-import { db } from "@/lib/firebase" // 🔥 Firebase instance ka path check kar lena
+import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 
-// Database se sirf comics ka data lekar aane ka function
+// 🔥 FIX: Interface ko ekdum clear bataya hai taaki TypeScript ka koi error na aaye
+interface FirebaseComicData {
+  title?: string;
+  coverUrl?: string;
+  imageUrl?: string;
+  image?: string;
+  cover?: string;
+  thumbnail?: string;
+}
+
 async function getComicsData() {
   try {
     const querySnapshot = await getDocs(collection(db, "comics"))
-    const comics = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      title: doc.data().title || "Untitled Comic",
-      coverUrl: doc.data().coverUrl || doc.data().imageUrl || "/hero-cosmic.png",
-    }))
+    
+    const comics = querySnapshot.docs.map((doc) => {
+      // 'as FirebaseComicData' lagane se TypeScript ko gussa nahi aayega
+      const data = doc.data() as FirebaseComicData;
+      
+      return {
+        id: doc.id,
+        title: data.title || "Untitled Comic",
+        // 🌟 Saare possible photo fields ko filter karke nikal rahe hain
+        coverUrl: data.coverUrl || data.imageUrl || data.image || data.cover || data.thumbnail || "/hero-cosmic.png",
+      }
+    })
+    
     return comics
   } catch (error) {
     console.error("Firebase comics fetch error:", error)
@@ -21,15 +38,11 @@ async function getComicsData() {
 }
 
 export default async function HomePage() {
-  // Dynamic comics load karna
   const allComics = await getComicsData()
 
   return (
     <SiteShell>
-      {/* Upar aapka mast banner dikhega */}
       <Hero />
-      
-      {/* 🔥 Niche ab characters nahi dikhenge, khali left-right scroll hone waali comics aayengi */}
       <div className="pb-12 bg-black">
         <ComicSlider comics={allComics} />
       </div>
