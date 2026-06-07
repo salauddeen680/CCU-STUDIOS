@@ -16,7 +16,7 @@ export default function ComicSlider({ comics }: { comics: Comic[] }) {
   // 🔥 Slider ke container ko track karne ke liye ref
   const sliderRef = useRef<HTMLDivElement>(null);
 
-  // 🔄 Auto-play logic: Har 2 second mein automatic slide badlegi
+  // 🔄 Auto-play logic: Har 1 second mein automatic slide badlegi
   useEffect(() => {
     const slider = sliderRef.current;
     if (!slider || !comics || comics.length === 0) return;
@@ -35,7 +35,7 @@ export default function ComicSlider({ comics }: { comics: Comic[] }) {
         scrollAmount += slideWidth;
         slider.scrollTo({ left: scrollAmount, behavior: 'smooth' });
       }
-    }, 3000); // ⏱️ 3000ms = 2 Second (Aap isey kam-zyada kar sakte ho)
+    }, 3000); // ⏱️ 3000ms = 1 Second (Aap isey kam-zyada kar sakte ho)
 
     // Agar user khud hath se ghumaye, toh tracking automatic update ho jaye
     const handleUserScroll = () => {
