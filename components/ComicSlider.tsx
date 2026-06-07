@@ -1,9 +1,13 @@
 import React from 'react'
 
+// 🔥 FIX: Interface mein saare possible image fields daal diye hain taaki TypeScript error na de
 interface Comic {
   id: string;
   title: string;
-  coverUrl: string;
+  coverUrl?: string;
+  imageUrl?: string;
+  image?: string;
+  cover?: string;
 }
 
 export default function ComicSlider({ comics }: { comics: Comic[] }) {
@@ -14,31 +18,40 @@ export default function ComicSlider({ comics }: { comics: Comic[] }) {
         Latest CCU Comics
       </h2>
 
-      {/* Left-Right Scroll Window */}
-      <div className="flex gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory py-4 px-2">
-        {comics && comics.map((comic) => (
-          <div 
-            key={comic.id} 
-            className="flex-none w-[200px] md:w-[250px] snap-start bg-zinc-900 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-red-500/20"
-          >
-            {/* Comic Cover Image */}
-            <a href={`/comics/${comic.id}`} className="block w-full h-[300px] md:h-[370px] relative">
-              <img 
-                src={comic.coverUrl || "/hero-cosmic.png"} 
-                alt={comic.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            </a>
-            
-            {/* Comic Title */}
-            <div className="p-3 bg-zinc-950">
-              <h3 className="text-white font-semibold text-sm md:text-base truncate">
-                {comic.title}
-              </h3>
+      {/* Left-Right Scroll Window with hidden scrollbar styling */}
+      <div className="flex gap-6 overflow-x-auto py-4 px-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {comics && comics.map((comic) => {
+          {/* 🔥 FIX: Yahan hum dhoondhenge ki database se kaunsa link aa raha hai */}
+          const currentImage = comic.coverUrl || comic.imageUrl || comic.image || comic.cover || "/hero-cosmic.png";
+
+          return (
+            <div 
+              key={comic.id} 
+              className="flex-none w-[200px] md:w-[250px] snap-start bg-zinc-900 rounded-lg overflow-hidden shadow-lg transition-transform duration-300 hover:scale-105 hover:shadow-red-500/20"
+            >
+              {/* Comic Cover Image */}
+              <a href={`/comics/${comic.id}`} className="block w-full h-[300px] md:h-[370px] relative">
+                <img 
+                  src={currentImage} 
+                  alt={comic.title}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    // 🔥 Backup plan: Agar link tuta hua ho toh blank nahi dikhega, automatic red logo/space template aa jayega
+                    e.currentTarget.src = "/hero-cosmic.png";
+                  }}
+                />
+              </a>
+              
+              {/* Comic Title */}
+              <div className="p-3 bg-zinc-950">
+                <h3 className="text-white font-semibold text-sm md:text-base truncate">
+                  {comic.title}
+                </h3>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   )
