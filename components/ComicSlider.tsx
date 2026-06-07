@@ -1,6 +1,7 @@
+"use client" // 🔥 FIX: Yeh line Vercel ka build error 100% khatam kar degi
+
 import React from 'react'
 
-// 🔥 FIX: Interface mein saare possible image fields daal diye hain taaki TypeScript error na de
 interface Comic {
   id: string;
   title: string;
@@ -18,10 +19,9 @@ export default function ComicSlider({ comics }: { comics: Comic[] }) {
         Latest CCU Comics
       </h2>
 
-      {/* Left-Right Scroll Window with hidden scrollbar styling */}
+      {/* Left-Right Scroll Window */}
       <div className="flex gap-6 overflow-x-auto py-4 px-2 snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {comics && comics.map((comic) => {
-          {/* 🔥 FIX: Yahan hum dhoondhenge ki database se kaunsa link aa raha hai */}
           const currentImage = comic.coverUrl || comic.imageUrl || comic.image || comic.cover || "/hero-cosmic.png";
 
           return (
@@ -37,7 +37,6 @@ export default function ComicSlider({ comics }: { comics: Comic[] }) {
                   className="w-full h-full object-cover"
                   loading="lazy"
                   onError={(e) => {
-                    // 🔥 Backup plan: Agar link tuta hua ho toh blank nahi dikhega, automatic red logo/space template aa jayega
                     e.currentTarget.src = "/hero-cosmic.png";
                   }}
                 />
