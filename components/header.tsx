@@ -48,13 +48,16 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4">
-        {/* Logo */}
+        
+        {/* 🔥 FIX: Logo and STUDIOS Side-by-Side (Mobile + Desktop dono par chalega) */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
+          {/* Red CCU Box */}
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-sm font-black text-white shadow-glow">
             CCU
           </span>
-          <span className="hidden font-display text-lg font-bold tracking-wide sm:block">
-            <span className="text-glow text-primary">CCU</span> STUDIOS
+          {/* STUDIOS Text - Isme se hidden block hata diya hai taaki hamesha side mein dikhe */}
+          <span className="font-display text-lg font-extrabold tracking-wider uppercase text-white">
+            STUDIOS
           </span>
         </Link>
 
