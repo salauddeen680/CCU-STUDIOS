@@ -30,9 +30,9 @@ export const metadata: Metadata = {
   verification: {
     google: "XXO_Zb9ewdf1cBmv-LqID5RdX-oPzpjuyMZ2ApSUuyM",
   },
-  // 🚀 Naya Logo Force Karne Ke Liye Line
+  // 🚀 GAME CHANGER: Yahan purana hatakar naya ".png" logo force kar diya hai
   icons: {
-    icon: "/favicon.ico",
+    icon: "/ccu-logo.png",
   },
 }
 
