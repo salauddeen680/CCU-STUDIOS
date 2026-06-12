@@ -1,6 +1,7 @@
 "use client"
 
 import { useFooter } from "@/lib/data"
+import { Instagram, Youtube, Facebook } from "lucide-react"
 
 export function Footer() {
   const { footer } = useFooter()
@@ -17,6 +18,36 @@ export function Footer() {
         <p className="mx-auto mt-4 max-w-md text-pretty text-xs text-muted">
           {footer.creator}
         </p>
+
+        {/* --- SOCIAL MEDIA ICONS SECTION START --- */}
+        <div className="mt-6 flex justify-center gap-6 text-muted">
+          <a 
+            href="https://www.instagram.com/ccustudios_?igsh=MWJvanlqa29scG1xdw==" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            <Instagram size={20} />
+          </a>
+          <a 
+            href="https://youtube.com/@ccustudios?si=EO4jVf64pR8v5zJ7" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            <Youtube size={20} />
+          </a>
+          <a 
+            href="https://www.facebook.com/share/1BNHLQhByc/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            <Facebook size={20} />
+          </a>
+        </div>
+        {/* --- SOCIAL MEDIA ICONS SECTION END --- */}
+
         <p className="mt-6 text-[11px] text-muted/70">
           {`© ${new Date().getFullYear()} CCU Studios. All rights reserved.`}
         </p>
