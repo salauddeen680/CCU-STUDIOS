@@ -1,13 +1,38 @@
 "use client"
 
 import Link from "next/link"
-import { BookOpen, ChevronLeft, Layers } from "lucide-react"
-import { useComic, likeComic } from "@/lib/data"
-import { LikeButton } from "./like-button"
+import { useEffect, useState } from "react"
+import { BookOpen, ChevronLeft, Layers, Video } from "lucide-react"
+import { useComic } from "@/lib/data"
 import { Comments } from "./comments"
+
+// Video Data ke liye TypeScript structure (Interface)
+interface VideoLink {
+  id: string
+  title: string
+  url: string
+  posterUrl: string
+}
 
 export function ComicDetail({ id }: { id: string }) {
   const { comic, loading } = useComic(id)
+  const [videoLinks, setVideoLinks] = useState<VideoLink[]>([])
+
+  // 📺 Admin Panel se lagaye gaye Videos aur Social Links fetch karne ke liye
+  useEffect(() => {
+    async function fetchSocialLinks() {
+      try {
+        const res = await fetch("https://ccu-studios.vercel.app/api/social-links")
+        if (res.ok) {
+          const data = await res.json()
+          setVideoLinks(data)
+        }
+      } catch (error) {
+        console.error("Failed to load video links", error)
+      }
+    }
+    fetchSocialLinks()
+  }, [])
 
   if (loading) {
     return (
@@ -69,12 +94,7 @@ export function ComicDetail({ id }: { id: string }) {
             <span className="inline-flex items-center gap-1.5">
               <Layers className="h-4 w-4" /> {comic.images?.length || 0} pages
             </span>
-            <LikeButton
-              count={comic.likes || 0}
-              storageKey={`comic:${comic.id}`}
-              onLike={() => likeComic(comic.id)}
-              size="lg"
-            />
+            {/* ❤️ LIKE BUTTON YAHAN SE SAFELY DELETE KAR DIYA GAYA HAI */}
           </div>
           <p className="mt-4 text-pretty leading-relaxed text-foreground/85">
             {comic.description}
@@ -88,6 +108,45 @@ export function ComicDetail({ id }: { id: string }) {
           </Link>
         </div>
       </div>
+
+      {/* 🔴 NEW FEATURE: Ek ke niche ek bade Video Banners / Posters (Jaise Comics Dikhti Hain) */}
+      {videoLinks.length > 0 && (
+        <div className="mt-12 border-t border-border pt-8">
+          <h2 className="font-display text-xl font-bold tracking-wide flex items-center gap-2">
+            <Video className="h-5 w-5 text-primary" /> Official Videos & Social Updates
+          </h2>
+          <div className="mt-6 flex flex-col gap-6">
+            {videoLinks.map((link) => (
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                key={link.id}
+                className="group relative block overflow-hidden rounded-2xl border border-border bg-card transition hover:border-primary hover:shadow-glow"
+              >
+                <div className="aspect-[16/6] w-full overflow-hidden sm:aspect-[16/5]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={link.posterUrl || "/placeholder.svg?height=300&width=800&query=video%20thumbnail"}
+                    alt={link.title}
+                    className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
+                  />
+                  {/* Dark overlay for text readability */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
+                  <h3 className="font-display text-base font-bold text-white sm:text-lg tracking-wide group-hover:text-primary transition">
+                    {link.title}
+                  </h3>
+                  <span className="mt-1 inline-block text-xs font-medium text-muted uppercase tracking-wider">
+                    Click to Open on Social Media 🚀
+                  </span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Comments parentId={comic.id} parentType="comic" />
     </div>
