@@ -1,219 +1,216 @@
 "use client"
 
-import { useSearchParams } from "next/navigation"
-import { Suspense, useState, useEffect } from "react"
-import { 
-  Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
-  MessageSquare, LogOut, Video 
-} from "lucide-react"
-import { initializeApp, getApps, getApp } from "firebase/app"
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
+import { useState, useEffect } from "react"
+import { Video, Plus, Trash2, Loader2, Link2, Image as ImageIcon } from "lucide-react"
 
-// 📥 Existing Core Components
-import { ComicsManager } from "@/components/admin/comics-manager"
-import { CharactersManager } from "@/components/admin/characters-manager"
-import { EngagementPanel } from "@/components/admin/engagement-panel"
-// 📺 Naya Video Manager Component Jo Hum Agli File Mein Banayenge
-import { VideoLinksManager } from "@/components/admin/video-links-manager"
-
-// 🔐 Secure Configuration using Vercel Environment Variables — NO CHANGES AT ALL
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+interface VideoLink {
+  id: string
+  title: string
+  url: string
+  posterUrl: string
 }
 
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
-const auth = getAuth(app)
-const ADMIN_ACCESS_KEY = "ccu-admin-2026"
-
-function AdminGate() {
-  const params = useSearchParams()
-  const access = params.get("access")
-  
-  const [user, setUser] = useState<User | null>(null)
+// 👑 CRITICAL FIX: Sahi tareeke se 'VideoLinksManager' naam export hona chahiye
+export function VideoLinksManager() {
+  const [links, setLinks] = useState<VideoLink[]>([])
   const [loading, setLoading] = useState(true)
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loginError, setLoginError] = useState("")
-  const [loginLoading, setLoginLoading] = useState(false)
+  const [submitLoading, setSubmitLoading] = useState(false)
 
-  // 🎛️ Dashboard Navigation States
-  const [activeTab, setActiveTab] = useState("comics")
+  // Form States
+  const [title, setTitle] = useState("")
+  const [url, setUrl] = useState("")
+  const [posterUrl, setPosterUrl] = useState("")
+  const [message, setMessage] = useState("")
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser)
-      setLoading(false)
-    })
-    return () => unsubscribe()
-  }, [])
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoginError("")
-    setLoginLoading(true)
+  // 📥 Video Links Fetch karne ke liye (Relative URL use kiya hai taaki crash na ho)
+  async function fetchLinks() {
     try {
-      await signInWithEmailAndPassword(auth, email, password)
-    } catch (err: any) {
-      console.error("Firebase Debug:", err)
-      setLoginError(`Firebase Error Code: ${err.code || err.message}`)
+      const res = await fetch("/api/social-links")
+      if (res.ok) {
+        const data = await res.json()
+        setLinks(data)
+      }
+    } catch (error) {
+      console.error("Failed to load video links", error)
     } finally {
-      setLoginLoading(false)
+      setLoading(false)
     }
   }
 
-  const handleLogout = () => {
-    signOut(auth)
+  useEffect(() => {
+    fetchLinks()
+  }, [])
+
+  // ➕ Naya Video Link Add karne ke liye
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitLoading(true)
+    setMessage("")
+
+    try {
+      const res = await fetch("/api/social-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, url, posterUrl }),
+      })
+
+      if (res.ok) {
+        setMessage("Success! Video Link Added 🔥")
+        setTitle("")
+        setUrl("")
+        setPosterUrl("")
+        fetchLinks()
+      } else {
+        setMessage("Failed to add link. Check your API route.")
+      }
+    } catch (error) {
+      setMessage("Error submitting data.")
+    } finally {
+      setSubmitLoading(false)
+    }
   }
 
-  if (access !== ADMIN_ACCESS_KEY) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-4 text-center bg-black text-white">
-        <Lock className="h-10 w-10 text-red-600" />
-        <h1 className="text-2xl font-bold tracking-wider">Restricted Zone</h1>
-        <p className="max-w-sm text-sm text-zinc-500">Valid access key required to reach the CCU Control Center.</p>
-      </div>
-    )
-  }
+  // 🗑️ Video Link Delete karne ke liye
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this video link?")) return
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black">
-        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-      </div>
-    )
-  }
-
-  // 🔐 1. DESIGNER LOGIN PANEL — UNTOUCHED & SECURE
-  if (!user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-black px-4 font-sans">
-        <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-950 p-8 shadow-2xl border-t-4 border-t-red-600">
-          <div className="flex flex-col items-center space-y-2 text-center">
-            <h1 className="text-3xl font-extrabold tracking-widest text-red-600">CCU STUDIOS</h1>
-            <p className="text-xs uppercase tracking-wider text-zinc-500">Authorized Personnel Login</p>
-          </div>
-          <form onSubmit={handleLogin} className="mt-8 space-y-5">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Email Address</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="admin@ccustudios.com" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Password</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="••••••••" />
-            </div>
-            {loginError && <p className="text-xs font-mono text-red-500 bg-red-950/30 border border-red-900/50 rounded-lg p-3 text-center">{loginError}</p>}
-            <button type="submit" disabled={loginLoading} className="w-full rounded-lg bg-red-600 py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-red-700 active:scale-[0.99] transition-all disabled:opacity-50">{loginLoading ? "Authenticating Master Keys..." : "Enter Command Center"}</button>
-          </form>
-        </div>
-      </div>
-    )
-  }
-
-  // 🚀 2. REAL PREMIUM ADMIN DASHBOARD UI
-  return (
-    <div className="flex min-h-screen bg-zinc-950 text-zinc-100 font-sans">
+    try {
+      const res = await fetch(`/api/api/social-links?id=${id}`, {
+        method: "DELETE",
+      })
+      // Yahan relative path agar aapka API folder structure alag hai toh use adjust karein
+      const fallbackRes = res.ok ? res : await fetch(`/api/social-links?id=${id}`, { method: "DELETE" })
       
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="w-64 border-r border-zinc-800 bg-zinc-900/40 p-6 flex flex-col justify-between shrink-0">
-        <div className="space-y-8">
-          <div>
-            <h2 className="text-xl font-black tracking-widest text-red-600">CCU CENTRAL</h2>
-            <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">Creator Panel Active</p>
-          </div>
+      if (fallbackRes.ok) {
+        setLinks(links.filter((link) => link.id !== id))
+      }
+    } catch (error) {
+      console.error("Failed to delete link", error)
+    }
+  }
 
-          <nav className="space-y-2">
-            {[
-              { id: "comics", label: "Comics Manager", icon: BookOpen },
-              { id: "characters", label: "Characters Manager", icon: UserSquare2 },
-              { id: "ultimate", label: "Ultimate Comic", icon: LayoutDashboard },
-              { id: "videos", label: "Social Videos Manager", icon: Video }, // 📺 NEW TAB: Video links ke posters manage karne ke liye
-              { id: "engagement", label: "Engagement Panel", icon: MessageSquare }
-            ].map((tab) => {
-              const Icon = tab.icon
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all ${
-                    activeTab === tab.id 
-                      ? "bg-red-600 text-white font-bold shadow-lg shadow-red-600/10" 
-                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {tab.label}
-                </button>
-              )
-            })}
-          </nav>
-        </div>
+  return (
+    <div className="space-y-6 font-sans">
+      <div>
+        <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+          <Video className="h-6 w-6 text-red-600" /> Social Videos Manager
+        </h1>
+        <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider">
+          Add or remove home page video banners and thumbnails
+        </p>
+      </div>
 
-        {/* CURRENT SESSION */}
-        <div className="pt-4 border-t border-zinc-800">
-          <div className="flex items-center justify-between mb-4 px-2">
-            <span className="text-xs text-zinc-500 truncate max-w-[140px]">{user.email}</span>
-            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-          </div>
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-zinc-800 hover:border-red-600/40 rounded-lg text-xs text-zinc-400 hover:text-red-500 bg-zinc-950/40 transition-all">
-            <LogOut className="h-3 w-3" />
-            Disconnect Session
-          </button>
-        </div>
-      </aside>
-
-      {/* MAIN LAYOUT DASHBOARD */}
-      <main className="flex-1 p-10 overflow-y-auto">
+      {/* Form Card */}
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
+        <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Plus className="h-4 w-4 text-red-600" /> Add New Video Poster
+        </h2>
         
-        {/* TAB: COMICS MANAGER (Iske andar edit option handle hoga) */}
-        {activeTab === "comics" && (
-          <div className="space-y-4">
-            <ComicsManager />
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Video Title</label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
+                placeholder="e.g. Michael - The Former Crown Official Teaser"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Video URL (YouTube/Insta)</label>
+              <div className="relative">
+                <Link2 className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
+                <input
+                  type="url"
+                  required
+                  value={url}
+                  onChange={(e) => setUrl(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
+                  placeholder="https://youtube.com/watch?v=..."
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Poster / Thumbnail Image URL</label>
+            <div className="relative">
+              <ImageIcon className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
+              <input
+                type="url"
+                required
+                value={posterUrl}
+                onChange={(e) => setPosterUrl(e.target.value)}
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
+                placeholder="https://images.unsplash.com/..."
+              />
+            </div>
+          </div>
+
+          {message && (
+            <p className={`text-xs font-semibold p-3 rounded-lg text-center ${
+              message.includes("Success") ? "bg-green-950/30 text-green-500 border border-green-900/50" : "bg-red-950/30 text-red-500 border border-red-900/50"
+            }`}>
+              {message}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={submitLoading}
+            className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-bold uppercase tracking-wider text-white hover:bg-red-700 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center gap-2"
+          >
+            {submitLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Saving...
+              </>
+            ) : (
+              "Deploy Video Poster"
+            )}
+          </button>
+        </form>
+      </div>
+
+      {/* List Card */}
+      <div className="rounded-xl border border-zinc-800 bg-zinc-900/20 p-6">
+        <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-wider mb-4">Active Video Posters</h2>
+        
+        {loading ? (
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-6 w-6 animate-spin text-red-600" />
+          </div>
+        ) : links.length === 0 ? (
+          <p className="text-sm text-zinc-500 text-center py-4">No video posters added yet.</p>
+        ) : (
+          <div className="space-y-3">
+            {links.map((link) => (
+              <div key={link.id} className="flex items-center justify-between p-4 rounded-xl border border-zinc-800/60 bg-zinc-950/40 hover:border-zinc-700 transition">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="h-12 w-20 rounded bg-zinc-900 overflow-hidden border border-zinc-800 shrink-0">
+                    <img src={link.posterUrl} alt="" className="h-full w-full object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-zinc-200 truncate">{link.title}</h3>
+                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-red-500 hover:underline truncate block mt-0.5">
+                      {link.url}
+                    </a>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDelete(link.id)}
+                  className="p-2 text-zinc-500 hover:text-red-500 rounded-lg hover:bg-zinc-900/80 transition"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
-
-        {/* TAB: CHARACTERS MANAGER */}
-        {activeTab === "characters" && (
-          <div className="space-y-4">
-            <CharactersManager />
-          </div>
-        )}
-
-        {/* TAB: ULTIMATE COMIC */}
-        {activeTab === "ultimate" && (
-          <div className="space-y-4">
-            <ComicsManager />
-          </div>
-        )}
-
-        {/* 📺 TAB: NEW VIDEO LINKS MANAGER PANEL */}
-        {activeTab === "videos" && (
-          <div className="space-y-4">
-            <VideoLinksManager />
-          </div>
-        )}
-
-        {/* TAB: ENGAGEMENT PANEL & LIKES ANALYTICS */}
-        {activeTab === "engagement" && (
-          <div className="space-y-4">
-            <EngagementPanel />
-          </div>
-        )}
-
-      </main>
+      </div>
     </div>
   )
 }
-
-export default function AdminPage() {
-  return (
-    <main className="min-h-screen bg-black">
-      <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-black"><Loader2 className="h-8 w-8 animate-spin text-red-600" /></div>}><AdminGate /></Suspense>
-    </main>
-  )
-}
-
