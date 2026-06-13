@@ -3,8 +3,6 @@
 import Link from "next/link"
 import { motion } from "framer-motion"
 import { BookOpen, User } from "lucide-react"
-import { LikeButton } from "./like-button"
-import { likeComic, likeCharacter } from "@/lib/data"
 import type { VaultItem } from "@/lib/types"
 
 export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number }) {
@@ -46,16 +44,16 @@ export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number
             )}
           </span>
         </div>
+        
+        {/* 📋 CARD DETAILED BLOCK */}
         <div className="space-y-1 p-3">
           <h3 className="line-clamp-1 font-display text-sm font-semibold">{title}</h3>
           <p className="line-clamp-2 text-xs text-muted">{desc}</p>
-          <div className="flex items-center justify-between pt-1">
-            <span className="text-[11px] text-muted">{isComic ? `${item.images?.length || 0} pages` : "Profile"}</span>
-            <LikeButton
-              count={item.likes || 0}
-              storageKey={`${item.kind}:${item.id}`}
-              onLike={() => (isComic ? likeComic(item.id) : likeCharacter(item.id))}
-            />
+          <div className="flex items-center justify-between pt-1 border-t border-zinc-900 mt-2">
+            <span className="text-[11px] text-zinc-500 font-medium tracking-wide uppercase">
+              {isComic ? `${item.images?.length || 0} pages` : "Official Profile"}
+            </span>
+            {/* 🎯 LIKE BUTTON SAFELY DELETED FROM HERE — CLEAN ENTERTAINMENT STUDIO LOOK */}
           </div>
         </div>
       </Link>
