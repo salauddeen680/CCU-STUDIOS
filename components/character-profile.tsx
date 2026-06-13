@@ -4,8 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import { ChevronLeft, Zap, ScrollText, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
-import { useCharacter, likeCharacter } from "@/lib/data"
-import { LikeButton } from "./like-button"
+import { useCharacter } from "@/lib/data"
 import { Comments } from "./comments"
 
 export function CharacterProfile({ id }: { id: string }) {
@@ -64,14 +63,7 @@ export function CharacterProfile({ id }: { id: string }) {
             <h1 className="text-balance font-display text-4xl font-bold text-glow">
               {character.name}
             </h1>
-            <div className="mt-3">
-              <LikeButton
-                count={character.likes || 0}
-                storageKey={`character:${character.id}`}
-                onLike={() => likeCharacter(character.id)}
-                size="lg"
-              />
-            </div>
+            {/* ❤️ LIKE BUTTON YAHAN SE SAFELY DELETE KAR DIYA GAYA HAI */}
             <p className="mt-4 max-w-2xl text-pretty leading-relaxed text-foreground/85">
               {character.bio}
             </p>
