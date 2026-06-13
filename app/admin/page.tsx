@@ -4,15 +4,17 @@ import { useSearchParams } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { 
   Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
-  MessageSquare, LogOut 
+  MessageSquare, LogOut, Video 
 } from "lucide-react"
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
 
-// 📥 Hamare naye customized components ko safely import kiya hai
+// 📥 Existing Core Components
 import { ComicsManager } from "@/components/admin/comics-manager"
 import { CharactersManager } from "@/components/admin/characters-manager"
 import { EngagementPanel } from "@/components/admin/engagement-panel"
+// 📺 Naya Video Manager Component Jo Hum Agli File Mein Banayenge
+import { VideoLinksManager } from "@/components/admin/video-links-manager"
 
 // 🔐 Secure Configuration using Vercel Environment Variables — NO CHANGES AT ALL
 const firebaseConfig = {
@@ -116,7 +118,7 @@ function AdminGate() {
   return (
     <div className="flex min-h-screen bg-zinc-950 text-zinc-100 font-sans">
       
-      {/* SIDEBAR NAVIGATION — Saare zaroori options aapke rules ke mutabik active hain */}
+      {/* SIDEBAR NAVIGATION */}
       <aside className="w-64 border-r border-zinc-800 bg-zinc-900/40 p-6 flex flex-col justify-between shrink-0">
         <div className="space-y-8">
           <div>
@@ -129,6 +131,7 @@ function AdminGate() {
               { id: "comics", label: "Comics Manager", icon: BookOpen },
               { id: "characters", label: "Characters Manager", icon: UserSquare2 },
               { id: "ultimate", label: "Ultimate Comic", icon: LayoutDashboard },
+              { id: "videos", label: "Social Videos Manager", icon: Video }, // 📺 NEW TAB: Video links ke posters manage karne ke liye
               { id: "engagement", label: "Engagement Panel", icon: MessageSquare }
             ].map((tab) => {
               const Icon = tab.icon
@@ -166,7 +169,7 @@ function AdminGate() {
       {/* MAIN LAYOUT DASHBOARD */}
       <main className="flex-1 p-10 overflow-y-auto">
         
-        {/* TAB: COMICS MANAGER */}
+        {/* TAB: COMICS MANAGER (Iske andar edit option handle hoga) */}
         {activeTab === "comics" && (
           <div className="space-y-4">
             <ComicsManager />
@@ -180,11 +183,17 @@ function AdminGate() {
           </div>
         )}
 
-        {/* TAB: ULTIMATE COMIC (Aapka alag framework jo aapko alag chahiye tha) */}
+        {/* TAB: ULTIMATE COMIC */}
         {activeTab === "ultimate" && (
           <div className="space-y-4">
-            {/* Yeh wahi comics manager load karega jahan hamare paas naya drop-down system hai */}
             <ComicsManager />
+          </div>
+        )}
+
+        {/* 📺 TAB: NEW VIDEO LINKS MANAGER PANEL */}
+        {activeTab === "videos" && (
+          <div className="space-y-4">
+            <VideoLinksManager />
           </div>
         )}
 
