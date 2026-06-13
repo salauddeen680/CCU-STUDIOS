@@ -2,13 +2,13 @@
 
 import { useState, useRef } from "react";
 import { Plus, Trash2, Loader2, Upload, CheckCircle2, X, Edit2 } from "lucide-react";
-import { useComics, createComic, deleteComic, updateComic } from "@/lib/data"; // 💡 updateComic import jodha
+import { useComics, createComic, deleteComic, updateComic } from "@/lib/data";
 import { ImageUploader } from "./image-uploader";
 
 export function ComicsManager() {
   const { comics = [], loading: dataLoading } = useComics();
   const [isOpen, setIsOpen] = useState(false);
-  const [editingComicId, setEditingComicId] = useState<string | null>(null); // 🎛️ Editing tracking state
+  const [editingComicId, setEditingComicId] = useState<string | null>(null);
   
   // Creator Form Control Inputs
   const [title, setTitle] = useState("");
@@ -20,7 +20,7 @@ export function ComicsManager() {
   const [pagesUploading, setPagesUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
 
-  // Editor Form Control Inputs (For editing separate comic)
+  // Editor Form Control Inputs
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editTimeline, setEditTimeline] = useState("asli");
@@ -66,7 +66,7 @@ export function ComicsManager() {
     } catch (err) {
       console.error(err);
       alert("Kuch pages uploads fail ho gaye bhai.");
-    } finaly {
+    } finally {
       setPagesUploading(false);
     }
   };
@@ -105,7 +105,7 @@ export function ComicsManager() {
     } catch (err) {
       console.error(err);
       alert("Kuch pages uploads fail ho gaye bhai.");
-    } finaly {
+    } finally {
       setEditPagesUploading(false);
     }
   };
@@ -135,7 +135,7 @@ export function ComicsManager() {
     } catch (err) {
       console.error(err);
       alert("Database error.");
-    } finaly {
+    } finally {
       setIsSaving(false);
     }
   };
@@ -174,7 +174,7 @@ export function ComicsManager() {
     } catch (err) {
       console.error(err);
       alert("Database update crash standard issue.");
-    } finaly {
+    } finally {
       setIsSaving(false);
     }
   };
@@ -261,7 +261,6 @@ export function ComicsManager() {
                       {comic.timeline || "asli"}
                     </span>
                     
-                    {/* ✏️ NEW FEATURE: Edit triggering button */}
                     <button 
                       type="button" 
                       onClick={() => { setIsOpen(false); editingComicId === comic.id ? setEditingComicId(null) : startEditing(comic); }} 
