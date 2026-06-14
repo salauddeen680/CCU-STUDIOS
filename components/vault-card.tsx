@@ -7,7 +7,13 @@ import type { VaultItem } from "@/lib/types"
 
 export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number }) {
   const isComic = item.kind === "comic"
-  const href = isComic ? `/comics/${item.id}` : `/characters/${item.id}`
+  
+  // 👑 CRITICAL FIX: URL ko ID ke bajaye aapke naye slug par route kiya hai
+  // Agar database mein field ka naam 'slug' ki jagah kuch aur hai, toh 'item.slug' ko badal lena bhai
+  const comicRoute = item.slug ? `/comics/${item.slug}` : `/comics/${item.id}`
+  const characterRoute = item.slug ? `/characters/${item.slug}` : `/characters/${item.id}`
+  
+  const href = isComic ? comicRoute : characterRoute
   const title = isComic ? item.title : item.name
   const image = isComic ? item.cover || item.images?.[0] : item.image
   const desc = isComic ? item.description : item.bio
@@ -53,7 +59,6 @@ export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number
             <span className="text-[11px] text-zinc-500 font-medium tracking-wide uppercase">
               {isComic ? `${item.images?.length || 0} pages` : "Official Profile"}
             </span>
-            {/* 🎯 LIKE BUTTON SAFELY DELETED FROM HERE — CLEAN ENTERTAINMENT STUDIO LOOK */}
           </div>
         </div>
       </Link>
