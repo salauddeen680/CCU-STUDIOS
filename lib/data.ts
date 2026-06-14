@@ -15,6 +15,7 @@ import {
   setDoc,
   getDoc,
   where,
+  getDocs,
   serverTimestamp,
 } from "firebase/firestore"
 import { db } from "./firebase"
@@ -37,8 +38,6 @@ export function useComics() {
         try {
           const list = snap.docs.map((d) => {
             const data = d.data() || {}
-            
-            // 🛡️ SAFETIES: Kisi bhi corrupted field par rendering exception block karne ke liye
             const safeImages = Array.isArray(data.images) ? data.images : []
             
             let assignedTimeline = data.timeline || "asli"
@@ -48,6 +47,7 @@ export function useComics() {
             
             return { 
               id: d.id, 
+              slug: data.slug || "", // 💡 Slug ko cleanly fetch query me map kiya
               title: data.title || "Untitled Comic",
               description: data.description || "",
               cover: data.cover || "",
@@ -92,6 +92,7 @@ export function useCharacters() {
             const data = d.data() || {}
             return { 
               id: d.id, 
+              slug: data.slug || "", // 💡 Character slug dynamic registry
               name: data.name || "Unknown Character",
               bio: data.bio || "",
               image: data.image || "",
@@ -118,81 +119,123 @@ export function useCharacters() {
   return { characters: characters || [], loading }
 }
 
-export function useComic(id: string) {
+// 👑 DUAL-QUERY FIX: Ab yeh ID aur Slug dono ko dynamic handle karega!
+export function useComic(idOrSlug: string) {
   const [comic, setComic] = useState<Comic | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!id) return
-    const unsub = onDocSnapshot(doc(db, "comics", id), (snap) => {
-      try {
-        if (snap.exists()) {
-          const data = snap.data() || {}
-          const safeImages = Array.isArray(data.images) ? data.images : []
-          let assignedTimeline = data.timeline || "asli"
-          if (!data.timeline && data.ultimate) {
-            assignedTimeline = "purani"
-          }
-          setComic({ 
-            id: snap.id, 
-            title: data.title || "Untitled Comic",
-            description: data.description || "",
-            cover: data.cover || "",
-            images: safeImages,
-            likes: data.likes || 0,
-            timeline: assignedTimeline, 
-            ultimate: !!data.ultimate,
-            createdAt: data.createdAt || Date.now()
-          } as Comic)
-        } else {
-          setComic(null)
-        }
-      } catch (err) {
-        console.error("Error fetching single comic doc stream:", err)
-        setComic(null)
-      } finally {
+    if (!idOrSlug) return
+    setLoading(true)
+
+    // Strategy 1: Pehle query check karegi ki kya yeh Kisi Comic ka 'slug' hai?
+    const slugQuery = query(collection(db, "comics"), where("slug", "==", idOrSlug))
+    
+    const unsubSlug = onSnapshot(slugQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const d = snapshot.docs[0]
+        const data = d.data() || {}
+        const safeImages = Array.isArray(data.images) ? data.images : []
+        setComic({
+          id: d.id,
+          slug: data.slug || "",
+          title: data.title || "Untitled Comic",
+          description: data.description || "",
+          cover: data.cover || "",
+          images: safeImages,
+          likes: data.likes || 0,
+          timeline: data.timeline || "asli",
+          ultimate: !!data.ultimate,
+          createdAt: data.createdAt || Date.now()
+        } as Comic)
         setLoading(false)
+      } else {
+        // Strategy 2: Agar Slug match nahi hua (purani post), toh Backup me direct Doc ID dhoondega
+        const docRef = doc(db, "comics", idOrSlug)
+        getDoc(docRef).then((docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data() || {}
+            setComic({
+              id: docSnap.id,
+              slug: data.slug || "",
+              title: data.title || "Untitled Comic",
+              description: data.description || "",
+              cover: data.cover || "",
+              images: Array.isArray(data.images) ? data.images : [],
+              likes: data.likes || 0,
+              timeline: data.timeline || "asli",
+              ultimate: !!data.ultimate,
+              createdAt: data.createdAt || Date.now()
+            } as Comic)
+          } else {
+            setComic(null)
+          }
+        }).catch(err => console.error("Backup fetch crash:", err))
+        .finally(() => setLoading(false))
       }
     })
-    return () => unsub()
-  }, [id])
+
+    return () => unsubSlug()
+  }, [idOrSlug])
 
   return { comic, loading }
 }
 
-export function useCharacter(id: string) {
+// 👑 DUAL-QUERY FIX: Characters ke naam ke links ko bina crash kiye chalane ke liye
+export function useCharacter(idOrSlug: string) {
   const [character, setCharacter] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!id) return
-    const unsub = onDocSnapshot(doc(db, "characters", id), (snap) => {
-      try {
-        if (snap.exists()) {
-          const data = snap.data() || {}
-          setCharacter({
-            id: snap.id,
-            name: data.name || "",
-            bio: data.bio || "",
-            image: data.image || "",
-            gallery: Array.isArray(data.gallery) ? data.gallery : [],
-            powers: Array.isArray(data.powers) ? data.powers : [],
-            arcs: Array.isArray(data.arcs) ? data.arcs : [],
-            likes: data.likes || 0,
-            createdAt: data.createdAt || Date.now()
+    if (!idOrSlug) return
+    setLoading(true)
+
+    const slugQuery = query(collection(db, "characters"), where("slug", "==", idOrSlug))
+    
+    const unsubSlug = onSnapshot(slugQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const d = snapshot.docs[0]
+        const data = d.data() || {}
+        setCharacter({
+          id: d.id,
+          slug: data.slug || "",
+          name: data.name || "",
+          bio: data.bio || "",
+          image: data.image || "",
+          gallery: Array.isArray(data.gallery) ? data.gallery : [],
+          powers: Array.isArray(data.powers) ? data.powers : [],
+          arcs: Array.isArray(data.arcs) ? data.arcs : [],
+          likes: data.likes || 0,
+          createdAt: data.createdAt || Date.now()
           } as Character)
-        } else {
-          setCharacter(null)
-        }
-      } catch (err) {
-        console.error(err)
-        setCharacter(null)
-      } finally {
         setLoading(false)
+      } else {
+        const docRef = doc(db, "characters", idOrSlug)
+        getDoc(docRef).then((docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data() || {}
+            setCharacter({
+              id: docSnap.id,
+              slug: data.slug || "",
+              name: data.name || "",
+              bio: data.bio || "",
+              image: data.image || "",
+              gallery: Array.isArray(data.gallery) ? data.gallery : [],
+              powers: Array.isArray(data.powers) ? data.powers : [],
+              arcs: Array.isArray(data.arcs) ? data.arcs : [],
+              likes: data.likes || 0,
+              createdAt: data.createdAt || Date.now()
+            } as Character)
+          } else {
+            setCharacter(null)
+          }
+        }).catch(err => console.error(err))
+        .finally(() => setLoading(false))
       }
     })
-    return () => unsub()
-  }, [id])
+
+    return () => unsubSlug()
+  }, [idOrSlug])
 
   return { character, loading }
 }
@@ -330,5 +373,4 @@ export async function saveFooter(data: FooterConfig) {
   await setDoc(doc(db, "settings", "footer"), data)
 }
 
-// touch helper to keep imports used
 export { serverTimestamp, getDoc }
