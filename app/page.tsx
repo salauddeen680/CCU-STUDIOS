@@ -89,7 +89,7 @@ export default async function HomePage() {
             <iframe
               width="100%"
               height="100%"
-              src="https://www.youtube.com/embed/g6NgIGox9bU?si=2_0P_N1JpL2yQ2E2" 
+              src="https://youtube.com/shorts/IexNsGnrPWU?si=bhXgJ3pfCH_CxXfY"
               title="CCU Studios Featured Video"
               frameBorder="0"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
