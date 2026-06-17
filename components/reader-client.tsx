@@ -11,9 +11,15 @@ export function ReaderClient({ id }: { id: string }) {
   if (!comic)
     return (
       <div className="flex h-screen items-center justify-center bg-background">
-        <p className="text-sm text-muted">Comic not found.</p>
+        <p className="text-sm text-zinc-500 font-sans tracking-wide">Comic not found.</p>
       </div>
     )
 
-  return <ComicReader title={comic.title} pages={comic.images || []} />
+  return (
+    <ComicReader 
+      title={comic.title} 
+      pages={comic.images || []} 
+      isPaid={comic.isPaid || false} // 🔥 THE PREMIUM WIRE: Yahan humne lock ka switch on kar diya!
+    />
+  )
 }
