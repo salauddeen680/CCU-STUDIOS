@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Trash2, Loader2, Upload, CheckCircle2, X, Edit2 } from "lucide-react";
+import { Plus, Trash2, Loader2, Upload, CheckCircle2, X, Edit2, Lock, Eye, CalendarClock } from "lucide-react";
 import { useComics, createComic, deleteComic, updateComic } from "@/lib/data";
 import { ImageUploader } from "./image-uploader";
 
@@ -10,7 +10,7 @@ export function ComicsManager() {
   const [isOpen, setIsOpen] = useState(false);
   const [editingComicId, setEditingComicId] = useState<string | null>(null);
   
-  // Creator Form Control Inputs
+  // 📝 Creator Form Control Inputs
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [timeline, setTimeline] = useState("asli");
@@ -19,8 +19,11 @@ export function ComicsManager() {
   const [pageUrls, setPageUrls] = useState<string[]>([]);
   const [pagesUploading, setPagesUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
+  // 👑 NAYE FEATURES: Premium & Upcoming Status
+  const [isPaid, setIsPaid] = useState(false);
+  const [publishStatus, setPublishStatus] = useState("published"); 
 
-  // Editor Form Control Inputs
+  // 📝 Editor Form Control Inputs
   const [editTitle, setEditTitle] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editTimeline, setEditTimeline] = useState("asli");
@@ -28,6 +31,9 @@ export function ComicsManager() {
   const [editPageUrls, setEditPageUrls] = useState<string[]>([]);
   const [editPagesUploading, setEditPagesUploading] = useState(false);
   const [editUploadProgress, setEditUploadProgress] = useState("");
+  // 👑 NAYE FEATURES FOR EDITOR
+  const [editIsPaid, setEditIsPaid] = useState(false);
+  const [editPublishStatus, setEditPublishStatus] = useState("published");
 
   const pagesInputRef = useRef<HTMLInputElement>(null);
   const editPagesInputRef = useRef<HTMLInputElement>(null);
@@ -110,6 +116,7 @@ export function ComicsManager() {
     }
   };
 
+  // 💾 NEW COMIC API Handler
   const handleSaveComic = async () => {
     if (!title.trim() || !description.trim()) {
       alert("Title aur Description dena zaroori hai bhai!");
@@ -123,15 +130,19 @@ export function ComicsManager() {
         timeline,
         cover: coverUrl || "",
         images: pageUrls,
-        ultimate: timeline === "purani"
+        ultimate: timeline === "purani",
+        isPaid: isPaid, // 👑 Saving Premium Status
+        publishStatus: publishStatus // 👑 Saving Upcoming Status
       });
       setTitle("");
       setDescription("");
       setCoverUrl("");
       setPageUrls([]);
       setUploadProgress("");
+      setIsPaid(false);
+      setPublishStatus("published");
       setIsOpen(false);
-      alert("Comic Published Successfully! 🎉");
+      alert("Comic Setup Successfully! 🎉");
     } catch (err) {
       console.error(err);
       alert("Database error.");
@@ -140,7 +151,7 @@ export function ComicsManager() {
     }
   };
 
-  // ✏️ Function to setup editor values when clicking Edit
+  // ✏️ Setup Editor values when clicking Edit
   const startEditing = (comic: any) => {
     setEditingComicId(comic.id);
     setEditTitle(comic.title || "");
@@ -149,6 +160,8 @@ export function ComicsManager() {
     setEditCoverUrl(comic.cover || "");
     setEditPageUrls(comic.images || []);
     setEditUploadProgress("");
+    setEditIsPaid(comic.isPaid || false); // Load previous premium state
+    setEditPublishStatus(comic.publishStatus || "published"); // Load previous publish status
   };
 
   // 💾 Update API Handler
@@ -167,7 +180,9 @@ export function ComicsManager() {
         timeline: editTimeline,
         cover: editCoverUrl,
         images: editPageUrls,
-        ultimate: editTimeline === "purani"
+        ultimate: editTimeline === "purani",
+        isPaid: editIsPaid, // 👑 Updating Premium Status
+        publishStatus: editPublishStatus // 👑 Updating Upcoming Status
       });
       setEditingComicId(null);
       alert("Comic Updated Successfully! 🔄");
@@ -195,7 +210,7 @@ export function ComicsManager() {
         </button>
       </div>
 
-      {/* CREATOR PANEL */}
+      {/* 🟢 CREATOR PANEL (Upload Form) */}
       {isOpen && (
         <div className="border border-zinc-800 bg-zinc-900/40 p-6 rounded-xl space-y-5 max-w-2xl">
           <input type="text" placeholder="Comic Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none" />
@@ -208,6 +223,40 @@ export function ComicsManager() {
               <option value="purani">🟡 Purani Timeline / Backstory (Ultimate Comic)</option>
               <option value="dusri">🔴 Dusri Universe / Fan Fiction</option>
             </select>
+          </div>
+
+          {/* 👑 NAYA SECTION: Release Status & Premium Switch */}
+          <div className="grid grid-cols-2 gap-4 border-t border-zinc-800 pt-4">
+            {/* Status Dropdown */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase">Release Status</label>
+              <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2">
+                {publishStatus === "upcoming" ? <CalendarClock className="h-4 w-4 text-blue-500" /> : <Eye className="h-4 w-4 text-green-500" />}
+                <select value={publishStatus} onChange={(e) => setPublishStatus(e.target.value)} className="w-full bg-transparent text-sm text-zinc-300 focus:outline-none cursor-pointer">
+                  <option value="published">Live Now (Published)</option>
+                  <option value="upcoming">Coming Soon (Upcoming)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Premium Toggle Box */}
+            <div className="space-y-2">
+              <label className="text-xs font-semibold text-zinc-400 uppercase">Content Access</label>
+              <label className={`flex items-center gap-3 w-full border rounded-lg px-3 py-2 cursor-pointer transition-all ${isPaid ? "bg-red-900/20 border-red-900/50" : "bg-zinc-950 border-zinc-800"}`}>
+                <input 
+                  type="checkbox" 
+                  checked={isPaid} 
+                  onChange={(e) => setIsPaid(e.target.checked)} 
+                  className="w-4 h-4 accent-red-600 rounded bg-zinc-900 border-zinc-700 cursor-pointer"
+                />
+                <div className="flex items-center gap-1.5">
+                  {isPaid ? <Lock className="h-4 w-4 text-red-500" /> : <BookOpen className="h-4 w-4 text-zinc-500" />}
+                  <span className={`text-sm font-semibold ${isPaid ? "text-red-400" : "text-zinc-400"}`}>
+                    {isPaid ? "Premium (Paid)" : "Free to Read"}
+                  </span>
+                </div>
+              </label>
+            </div>
           </div>
 
           <ImageUploader label="Cover Image" folder="covers" onUploadComplete={(url) => setCoverUrl(url)} />
@@ -235,13 +284,13 @@ export function ComicsManager() {
             )}
           </div>
 
-          <button onClick={handleSaveComic} disabled={isSaving || pagesUploading} className="w-full bg-red-600 text-white text-xs font-bold py-3 rounded-lg uppercase tracking-wider flex items-center justify-center gap-2">
-            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save and Publish"}
+          <button onClick={handleSaveComic} disabled={isSaving || pagesUploading} className="w-full bg-red-600 text-white text-xs font-bold py-3 rounded-lg uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-red-700">
+            {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Settings"}
           </button>
         </div>
       )}
 
-      {/* VAULT LIST WITH INTEGRATED DYNAMIC EDITOR */}
+      {/* 🟢 VAULT LIST WITH INTEGRATED DYNAMIC EDITOR */}
       <div className="border border-zinc-800 bg-zinc-900/20 rounded-xl p-6">
         <div className="divide-y divide-zinc-800">
           {dataLoading ? (
@@ -252,9 +301,19 @@ export function ComicsManager() {
             comics.map((comic) => (
               <div key={comic.id} className="flex flex-col py-3">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <h4 className="text-sm font-bold text-white">{comic.title}</h4>
-                    <p className="text-xs text-zinc-500">Pages: {comic.images?.length || 0}</p>
+                  <div className="flex items-center gap-3">
+                    {/* Badge showing if Paid or Free */}
+                    {comic.isPaid && <Lock className="h-3 w-3 text-red-500" title="Premium Comic" />}
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        {comic.title} 
+                        {/* Upcoming Badge */}
+                        {comic.publishStatus === "upcoming" && (
+                          <span className="text-[9px] bg-blue-900/30 text-blue-400 border border-blue-900/50 px-1.5 py-0.5 rounded uppercase font-bold">Upcoming</span>
+                        )}
+                      </h4>
+                      <p className="text-xs text-zinc-500">Pages: {comic.images?.length || 0}</p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
@@ -294,6 +353,32 @@ export function ComicsManager() {
                         <option value="purani">🟡 Purani Timeline (Ultimate)</option>
                         <option value="dusri">🔴 Dusri Universe</option>
                       </select>
+                    </div>
+
+                    {/* 👑 EDITOR NAYA SECTION: Release Status & Premium Switch */}
+                    <div className="grid grid-cols-2 gap-3 py-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Release Status</label>
+                        <select value={editPublishStatus} onChange={(e) => setEditPublishStatus(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:outline-none">
+                          <option value="published">Live Now</option>
+                          <option value="upcoming">Coming Soon</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-semibold text-zinc-500 uppercase">Premium Lock</label>
+                        <label className={`flex items-center gap-2 w-full border rounded px-2 py-1.5 cursor-pointer ${editIsPaid ? "bg-red-900/20 border-red-900/50" : "bg-zinc-900 border-zinc-800"}`}>
+                          <input 
+                            type="checkbox" 
+                            checked={editIsPaid} 
+                            onChange={(e) => setEditIsPaid(e.target.checked)} 
+                            className="w-3 h-3 accent-red-600 rounded bg-zinc-900 border-zinc-700"
+                          />
+                          <span className={`text-xs font-semibold ${editIsPaid ? "text-red-400" : "text-zinc-400"}`}>
+                            {editIsPaid ? "Paid Comic" : "Free Read"}
+                          </span>
+                        </label>
+                      </div>
                     </div>
 
                     <ImageUploader label="Change Cover Image" folder="covers" onUploadComplete={(url) => setEditCoverUrl(url)} />
