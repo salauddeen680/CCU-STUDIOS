@@ -3,9 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Search, Menu, X, BookOpen, Users, Sparkles } from "lucide-react"
+import { Search, Menu, X, BookOpen, Users, Sparkles, LogIn, LogOut, UserCircle } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { useComics, useCharacters } from "@/lib/data"
+
+// 🔥 FIREBASE IMPORTS FOR LOGIN & DATABASE
+import { auth, db } from "@/lib/firebase" 
+import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth"
+import { doc, getDoc, setDoc } from "firebase/firestore"
 
 const NAV = [
   { href: "/comics", label: "Comics", icon: BookOpen },
@@ -20,8 +25,57 @@ export function Header() {
   const [term, setTerm] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // 👤 FAN SESSION STATE
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoggingIn, setIsLoggingIn] = useState(false)
+
   const { comics } = useComics()
   const { characters } = useCharacters()
+
+  // 🔄 AUTH LISTENER: Website ko batayega ki fan logged in hai ya nahi
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+    })
+    return () => unsubscribe()
+  }, [])
+
+  // 🚀 GOOGLE LOGIN & DATABASE SAVER LOGIC
+  const handleGoogleLogin = async () => {
+    if (isLoggingIn) return
+    setIsLoggingIn(true)
+    try {
+      const provider = new GoogleAuthProvider()
+      const result = await signInWithPopup(auth, provider)
+      const loggedInUser = result.user
+
+      // Firestore check: Kya yeh fan pehli baar aaya hai?
+      const userRef = doc(db, "users", loggedInUser.uid)
+      const userSnap = await getDoc(userRef)
+
+      if (!userSnap.exists()) {
+        // Naya fan hai! Database mein profile bana do
+        await setDoc(userRef, {
+          name: loggedInUser.displayName || "CCU Fan",
+          email: loggedInUser.email,
+          isPremium: false,        // Default status: Free user
+          premiumExpiry: null,     // Default expiry: None
+          joinedAt: new Date().toISOString()
+        })
+        console.log("New CCU Fan Profile Created!")
+      } else {
+        console.log("Welcome back to CCU!")
+      }
+    } catch (error) {
+      console.error("Login failed:", error)
+    } finally {
+      setIsLoggingIn(false)
+    }
+  }
+
+  const handleLogout = async () => {
+    await signOut(auth)
+  }
 
   const results = useMemo(() => {
     const t = term.trim().toLowerCase()
@@ -49,19 +103,17 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4">
         
-        {/* 🔥 FIX: Logo and STUDIOS Side-by-Side (Mobile + Desktop dono par chalega) */}
+        {/* 🎬 CCU STUDIOS LOGO */}
         <Link href="/" className="flex items-center gap-2 shrink-0">
-          {/* Red CCU Box */}
           <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-sm font-black text-white shadow-glow">
             CCU
           </span>
-          {/* STUDIOS Text - Isme se hidden block hata diya hai taaki hamesha side mein dikhe */}
           <span className="font-display text-lg font-extrabold tracking-wider uppercase text-white">
             STUDIOS
           </span>
         </Link>
 
-        {/* Desktop nav */}
+        {/* 💻 DESKTOP NAV */}
         <nav className="hidden items-center gap-1 md:flex">
           {NAV.map((item) => {
             const active = pathname.startsWith(item.href)
@@ -79,8 +131,10 @@ export function Header() {
           })}
         </nav>
 
-        {/* Right: search + mobile menu */}
+        {/* 🛠️ RIGHT CONTROLS: SEARCH + LOGIN + MOBILE MENU */}
         <div className="flex items-center gap-2">
+          
+          {/* 🔍 Search Button */}
           <button
             onClick={() => setSearchOpen((s) => !s)}
             aria-label="Search"
@@ -88,6 +142,35 @@ export function Header() {
           >
             <Search className="h-4 w-4" />
           </button>
+
+          {/* 🔐 AUTH SYSTEM (Desktop & Mobile) */}
+          <div className="hidden sm:flex items-center">
+            {user ? (
+              <div className="flex items-center gap-3 ml-2 border-l border-zinc-800 pl-4">
+                <span className="text-xs font-bold text-zinc-300 flex items-center gap-1">
+                  <UserCircle className="h-4 w-4 text-primary" />
+                  {user.displayName?.split(" ")[0] || "Fan"}
+                </span>
+                <button
+                  onClick={handleLogout}
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-900 text-zinc-400 hover:text-red-500 hover:bg-zinc-800 transition border border-zinc-800"
+                  title="Logout"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleGoogleLogin}
+                disabled={isLoggingIn}
+                className="ml-2 flex items-center gap-2 rounded-lg bg-white px-4 py-1.5 text-xs font-bold text-black hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10"
+              >
+                {isLoggingIn ? "Logging in..." : "Login"} <LogIn className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* 📱 Mobile Menu Hamburger */}
           <button
             onClick={() => setOpen((s) => !s)}
             aria-label="Menu"
@@ -98,7 +181,7 @@ export function Header() {
         </div>
       </div>
 
-      {/* Live search panel */}
+      {/* 🔍 LIVE SEARCH PANEL */}
       <AnimatePresence>
         {searchOpen && (
           <motion.div
@@ -149,7 +232,7 @@ export function Header() {
         )}
       </AnimatePresence>
 
-      {/* Mobile nav */}
+      {/* 📱 MOBILE NAV MENU */}
       <AnimatePresence>
         {open && (
           <motion.nav
@@ -175,6 +258,30 @@ export function Header() {
                   </Link>
                 )
               })}
+              
+              {/* Mobile Login/Logout Button */}
+              <div className="mt-2 border-t border-border/60 pt-2">
+                {user ? (
+                  <div className="flex items-center justify-between px-3 py-3">
+                    <span className="text-sm font-bold text-zinc-300 flex items-center gap-2">
+                      <UserCircle className="h-5 w-5 text-primary" />
+                      {user.displayName}
+                    </span>
+                    <button onClick={handleLogout} className="text-xs font-bold text-red-500 hover:text-red-400 uppercase tracking-wider flex items-center gap-1">
+                      Logout <LogOut className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGoogleLogin}
+                    disabled={isLoggingIn}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-bold text-black hover:bg-zinc-200 transition-colors"
+                  >
+                    {isLoggingIn ? "Connecting..." : "Login to CCU"} <LogIn className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
             </div>
           </motion.nav>
         )}
