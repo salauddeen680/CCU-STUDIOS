@@ -36,16 +36,26 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
         body: JSON.stringify({ amount }) 
       });
       const data = await res.json();
+      
+      if (!data.orderId) throw new Error("Order creation failed");
+
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         order_id: data.orderId,
         name: "CCU Studios",
-        handler: () => { setIsPremium(true); alert("Success!"); },
+        description: "Premium Comic Access",
+        handler: function (response: any) {
+          setIsPremium(true);
+          alert("Payment Successful! Welcome to CCU VIP Club.");
+        },
         theme: { color: "#dc2626" }
       };
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error("Payment error:", err);
+      alert("Payment initiation failed. Please check your internet or API keys.");
+    }
   };
 
   const go = useCallback((dir: 1 | -1) => {
@@ -59,6 +69,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const next = useCallback(() => go(1), [go])
   const prev = useCallback(() => go(-1), [go])
 
+  // Keyboard Navigation Logic (ORIGINAL 280+ LINES STRUCTURE)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (showPaywall && ((e.key === "ArrowRight" && !rtl) || (e.key === "ArrowLeft" && rtl))) return
@@ -70,6 +81,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
     return () => window.removeEventListener("keydown", onKey)
   }, [rtl, next, prev, showPaywall])
 
+  // Image Preloading Logic
   useEffect(() => {
     const preload = (i: number) => {
       if (i < 0 || i >= total) return
@@ -122,6 +134,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
           </motion.div>
         </AnimatePresence>
 
+        {/* Premium Lock Overlay */}
         <AnimatePresence>
           {showPaywall && (
             <motion.div 
@@ -138,8 +151,8 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
                 Aage ki bawal kahani aur epic cinematic action dekhne ke liye is issue ko khareedein ya CCU VIP Club ka hissa banein.
               </p>
               <div className="flex w-full max-w-sm flex-col gap-4">
-                <button onClick={() => initiatePayment(19)} className="group relative w-full overflow-hidden rounded-full bg-red-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-red-700">Buy This Issue — ₹19</button>
-                <button onClick={() => initiatePayment(69)} className="w-full rounded-full border border-zinc-700 bg-zinc-900/80 py-3.5 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-zinc-800">Join CCU VIP Club — ₹69/mo</button>
+                <button onClick={() => initiatePayment(19)} className="group relative w-full overflow-hidden rounded-full bg-red-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.4)]">Buy This Issue — ₹19</button>
+                <button onClick={() => initiatePayment(69)} className="w-full rounded-full border border-zinc-700 bg-zinc-900/80 py-3.5 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-zinc-800 hover:scale-[1.02] active:scale-95">Join CCU VIP Club — ₹69/mo</button>
               </div>
             </motion.div>
           )}
@@ -158,7 +171,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
           <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="glass-strong absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-3 px-4 py-3">
             <Link href="/comics" className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-900/80 text-white hover:text-red-400 transition-colors border border-zinc-800"><X className="h-4 w-4" /></Link>
             <p className="line-clamp-1 flex-1 text-center font-sans tracking-wider text-sm font-bold text-white uppercase">{title}</p>
-            <button onClick={(e) => { e.stopPropagation(); setRtl((r) => !r); }} className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-2.5 py-2 text-[11px] font-bold text-white"><ArrowLeftRight className="h-4 w-4" />{rtl ? "RTL" : "LTR"}</button>
+            <button onClick={(e) => { e.stopPropagation(); setRtl((r) => !r); }} className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-2.5 py-2 text-[11px] font-bold text-white hover:text-primary transition-colors"><ArrowLeftRight className="h-4 w-4" />{rtl ? "RTL" : "LTR"}</button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -168,9 +181,9 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
           <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} className="glass-strong absolute inset-x-0 bottom-0 z-50 px-4 py-3">
             <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-zinc-800"><div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${progress}%` }} /></div>
             <div className="flex items-center justify-between">
-              <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={index === 0} className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"><ChevronLeft className="h-4 w-4" /> Prev</button>
+              <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={index === 0} className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-xs font-bold text-white disabled:opacity-40 hover:bg-zinc-800 transition-all"><ChevronLeft className="h-4 w-4" /> Prev</button>
               <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 font-sans tracking-widest"><Maximize className="h-3.5 w-3.5" />{index + 1} / {total}</span>
-              <button onClick={(e) => { e.stopPropagation(); next(); }} disabled={index === total - 1 || showPaywall} className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">Next <ChevronRight className="h-4 w-4" /></button>
+              <button onClick={(e) => { e.stopPropagation(); next(); }} disabled={index === total - 1 || showPaywall} className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-xs font-bold text-white disabled:opacity-40 hover:bg-zinc-800 transition-all">Next <ChevronRight className="h-4 w-4" /></button>
             </div>
           </motion.div>
         )}
