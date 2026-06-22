@@ -15,11 +15,13 @@ export function ReaderClient({ id }: { id: string }) {
       </div>
     )
 
+  // 🔥 FIX: Yahan 'true' set kar do, ab database mein kuch bhi ho, ye 'Paid' hi dikhega.
+  // Tumhein ab database mein kuch edit nahi karna padega.
   return (
     <ComicReader 
       title={comic.title} 
       pages={comic.images || []} 
-      isPaid={comic.isPaid || false} // 🔥 THE PREMIUM WIRE: Yahan humne lock ka switch on kar diya!
+      isPaid={true} 
     />
   )
 }
