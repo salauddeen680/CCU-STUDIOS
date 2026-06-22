@@ -19,6 +19,7 @@ export function ComicsManager() {
   const [pageUrls, setPageUrls] = useState<string[]>([]);
   const [pagesUploading, setPagesUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
+  
   // 👑 NAYE FEATURES: Premium & Upcoming Status
   const [isPaid, setIsPaid] = useState(false);
   const [publishStatus, setPublishStatus] = useState("published"); 
@@ -31,6 +32,7 @@ export function ComicsManager() {
   const [editPageUrls, setEditPageUrls] = useState<string[]>([]);
   const [editPagesUploading, setEditPagesUploading] = useState(false);
   const [editUploadProgress, setEditUploadProgress] = useState("");
+  
   // 👑 NAYE FEATURES FOR EDITOR
   const [editIsPaid, setEditIsPaid] = useState(false);
   const [editPublishStatus, setEditPublishStatus] = useState("published");
@@ -181,8 +183,8 @@ export function ComicsManager() {
         cover: editCoverUrl,
         images: editPageUrls,
         ultimate: editTimeline === "purani",
-        isPaid: editIsPaid, 
-        publishStatus: editPublishStatus 
+        isPaid: editIsPaid, // Explicitly passed
+        publishStatus: editPublishStatus // Explicitly passed
       });
       setEditingComicId(null);
       alert("Comic Updated Successfully! 🔄");
@@ -210,7 +212,6 @@ export function ComicsManager() {
         </button>
       </div>
 
-      {/* 🟢 CREATOR PANEL (Upload Form) */}
       {isOpen && (
         <div className="border border-zinc-800 bg-zinc-900/40 p-6 rounded-xl space-y-5 max-w-2xl">
           <input type="text" placeholder="Comic Title" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none" />
@@ -225,9 +226,7 @@ export function ComicsManager() {
             </select>
           </div>
 
-          {/* 👑 NAYA SECTION: Release Status & Premium Switch */}
           <div className="grid grid-cols-2 gap-4 border-t border-zinc-800 pt-4">
-            {/* Status Dropdown */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase">Release Status</label>
               <div className="flex items-center gap-2 bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2">
@@ -238,7 +237,6 @@ export function ComicsManager() {
               </div>
             </div>
 
-            {/* Premium Toggle Box */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase">Content Access</label>
               <label className={`flex items-center gap-3 w-full border rounded-lg px-3 py-2 cursor-pointer transition-all ${isPaid ? "bg-red-900/20 border-red-900/50" : "bg-zinc-950 border-zinc-800"}`}>
@@ -269,18 +267,6 @@ export function ComicsManager() {
             </button>
             {pagesUploading && <p className="text-xs text-zinc-500">{uploadProgress}</p>}
             {pageUrls.length > 0 && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages ready!</p>}
-
-            {pageUrls.length > 0 && (
-              <div className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
-                {pageUrls.map((src, i) => (
-                  <div key={i} className="relative group rounded border border-zinc-800 overflow-hidden bg-zinc-950">
-                    <img src={src} alt={`Page ${i + 1}`} className="aspect-[3/4] w-full object-cover" />
-                    <button type="button" onClick={() => setPageUrls((prev) => prev.filter((_, idx) => idx !== i))} className="absolute right-1 top-1 rounded-full bg-black/80 p-1 text-zinc-400 hover:text-white transition-colors"><X className="h-3 w-3" /></button>
-                    <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 px-1 text-zinc-300 rounded">P. {i + 1}</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           <button onClick={handleSaveComic} disabled={isSaving || pagesUploading} className="w-full bg-red-600 text-white text-xs font-bold py-3 rounded-lg uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-red-700">
@@ -289,7 +275,6 @@ export function ComicsManager() {
         </div>
       )}
 
-      {/* 🟢 VAULT LIST WITH INTEGRATED DYNAMIC EDITOR */}
       <div className="border border-zinc-800 bg-zinc-900/20 rounded-xl p-6">
         <div className="divide-y divide-zinc-800">
           {dataLoading ? (
@@ -316,23 +301,15 @@ export function ComicsManager() {
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase bg-zinc-800 text-zinc-400 border border-zinc-700">
                       {comic.timeline || "asli"}
                     </span>
-                    
-                    <button 
-                      type="button" 
-                      onClick={() => { setIsOpen(false); editingComicId === comic.id ? setEditingComicId(null) : startEditing(comic); }} 
-                      className="text-zinc-400 hover:text-blue-500 transition-colors"
-                      title="Edit Comic"
-                    >
+                    <button type="button" onClick={() => { setIsOpen(false); editingComicId === comic.id ? setEditingComicId(null) : startEditing(comic); }} className="text-zinc-400 hover:text-blue-500 transition-colors">
                       <Edit2 className="h-4 w-4" />
                     </button>
-
                     <button type="button" onClick={async () => { if(confirm("Delete?")) await deleteComic(comic.id) }} className="text-zinc-600 hover:text-red-500 transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
 
-                {/* 🛠️ LIVE COMIC EDITOR DROPDOWN FORM */}
                 {editingComicId === comic.id && (
                   <div className="mt-4 border border-zinc-800 bg-zinc-950 p-5 rounded-lg space-y-4 max-w-xl self-start w-full">
                     <div className="flex justify-between items-center border-b border-zinc-800 pb-2">
@@ -340,23 +317,13 @@ export function ComicsManager() {
                       <button type="button" onClick={() => setEditingComicId(null)} className="text-zinc-500 hover:text-white"><X className="h-4 w-4" /></button>
                     </div>
 
-                    <input type="text" placeholder="Edit Title" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none" />
-                    <textarea placeholder="Edit Summary..." rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white focus:outline-none resize-none" />
+                    <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white" />
+                    <textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white" />
                     
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-semibold text-zinc-500 uppercase">Change Timeline</label>
-                      <select value={editTimeline} onChange={(e) => setEditTimeline(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-300 focus:outline-none">
-                        <option value="asli">🟢 Asli Timeline</option>
-                        <option value="purani">🟡 Purani Timeline (Ultimate)</option>
-                        <option value="dusri">🔴 Dusri Universe</option>
-                      </select>
-                    </div>
-
-                    {/* 👑 EDITOR NAYA SECTION: Release Status & Premium Switch */}
                     <div className="grid grid-cols-2 gap-3 py-2">
                       <div className="space-y-1">
                         <label className="text-[10px] font-semibold text-zinc-500 uppercase">Release Status</label>
-                        <select value={editPublishStatus} onChange={(e) => setEditPublishStatus(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300 focus:outline-none">
+                        <select value={editPublishStatus} onChange={(e) => setEditPublishStatus(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300">
                           <option value="published">Live Now</option>
                           <option value="upcoming">Coming Soon</option>
                         </select>
@@ -365,45 +332,14 @@ export function ComicsManager() {
                       <div className="space-y-1">
                         <label className="text-[10px] font-semibold text-zinc-500 uppercase">Premium Lock</label>
                         <label className={`flex items-center gap-2 w-full border rounded px-2 py-1.5 cursor-pointer ${editIsPaid ? "bg-red-900/20 border-red-900/50" : "bg-zinc-900 border-zinc-800"}`}>
-                          <input 
-                            type="checkbox" 
-                            checked={editIsPaid} 
-                            onChange={(e) => setEditIsPaid(e.target.checked)} 
-                            className="w-3 h-3 accent-red-600 rounded bg-zinc-900 border-zinc-700"
-                          />
-                          <span className={`text-xs font-semibold ${editIsPaid ? "text-red-400" : "text-zinc-400"}`}>
-                            {editIsPaid ? "Paid Comic" : "Free Read"}
-                          </span>
+                          <input type="checkbox" checked={editIsPaid} onChange={(e) => setEditIsPaid(e.target.checked)} />
+                          <span className={`text-xs ${editIsPaid ? "text-red-400" : "text-zinc-400"}`}>{editIsPaid ? "Paid Comic" : "Free"}</span>
                         </label>
                       </div>
                     </div>
 
-                    <ImageUploader label="Change Cover Image" folder="covers" onUploadComplete={(url) => setEditCoverUrl(url)} />
-                    {editCoverUrl && <img src={editCoverUrl} alt="Cover Preview" className="mt-1 h-24 w-18 object-cover rounded border border-zinc-800" />}
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-semibold text-zinc-500 uppercase">Comic Pages Vault ({editPageUrls.length})</label>
-                      <input type="file" accept="image/*" multiple ref={editPagesInputRef} className="hidden" onChange={handleEditPagesUpload} />
-                      <button type="button" onClick={() => editPagesInputRef.current?.click()} disabled={editPagesUploading} className="w-full py-2 flex items-center justify-center border border-dashed border-zinc-800 bg-zinc-900 rounded text-xs text-zinc-400">
-                        {editPagesUploading ? <Loader2 className="h-4 w-4 animate-spin text-blue-500" /> : `Add More Pages Bulk`}
-                      </button>
-                      {editPagesUploading && <p className="text-[11px] text-zinc-500">{editUploadProgress}</p>}
-                      
-                      {editPageUrls.length > 0 && (
-                        <div className="grid grid-cols-5 gap-1.5 pt-2">
-                          {editPageUrls.map((src, idx) => (
-                            <div key={idx} className="relative group rounded border border-zinc-800 overflow-hidden bg-zinc-900">
-                              <img src={src} alt="" className="aspect-[3/4] w-full object-cover" />
-                              <button type="button" onClick={() => setEditPageUrls((prev) => prev.filter((_, i) => i !== idx))} className="absolute right-0.5 top-0.5 rounded-full bg-black/80 p-0.5 text-zinc-400 hover:text-white"><X className="h-2.5 w-2.5" /></button>
-                              <span className="absolute bottom-0.5 left-0.5 text-[8px] bg-black/60 px-0.5 text-zinc-400 rounded">P. {idx + 1}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    <button onClick={handleUpdateComic} disabled={isSaving || editPagesUploading} className="w-full bg-blue-600 text-white text-xs font-bold py-2 rounded uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-blue-700 transition">
-                      {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save Changes"}
+                    <button onClick={handleUpdateComic} disabled={isSaving} className="w-full bg-blue-600 text-white text-xs font-bold py-2 rounded hover:bg-blue-700">
+                      {isSaving ? "Saving..." : "Save Changes"}
                     </button>
                   </div>
                 )}
