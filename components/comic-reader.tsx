@@ -25,9 +25,10 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const [isPremium, setIsPremium] = useState(false)
 
   const total = pages.length
+  // 8 pages tak free, 9th page se lock
   const showPaywall = isPaid && !isPremium && index >= 8
 
-  // PAYMENT LOGIC
+  // Razorpay Payment Handler
   const initiatePayment = async (amount: number) => {
     try {
       const res = await fetch("/api/create-order", { 
@@ -43,10 +44,10 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         order_id: data.orderId,
         name: "CCU Studios",
-        description: "Premium Comic Access",
+        description: amount === 19 ? "Single Issue Access" : "VIP Monthly Membership",
         handler: function (response: any) {
           setIsPremium(true);
-          alert("Payment Successful! Welcome to CCU VIP Club.");
+          alert("Payment Successful! Access Unlocked.");
         },
         theme: { color: "#dc2626" }
       };
@@ -54,7 +55,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
       rzp.open();
     } catch (err) {
       console.error("Payment error:", err);
-      alert("Payment initiation failed. Please check your internet or API keys.");
+      alert("Payment initiation failed. Please try again later.");
     }
   };
 
@@ -69,7 +70,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const next = useCallback(() => go(1), [go])
   const prev = useCallback(() => go(-1), [go])
 
-  // Keyboard Navigation Logic (ORIGINAL 280+ LINES STRUCTURE)
+  // Keyboard navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (showPaywall && ((e.key === "ArrowRight" && !rtl) || (e.key === "ArrowLeft" && rtl))) return
@@ -81,7 +82,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
     return () => window.removeEventListener("keydown", onKey)
   }, [rtl, next, prev, showPaywall])
 
-  // Image Preloading Logic
+  // Preload neighbours
   useEffect(() => {
     const preload = (i: number) => {
       if (i < 0 || i >= total) return
@@ -134,7 +135,6 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
           </motion.div>
         </AnimatePresence>
 
-        {/* Premium Lock Overlay */}
         <AnimatePresence>
           {showPaywall && (
             <motion.div 
