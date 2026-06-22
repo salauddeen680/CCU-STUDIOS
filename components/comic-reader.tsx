@@ -25,10 +25,9 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const [isPremium, setIsPremium] = useState(false)
 
   const total = pages.length
-  // 8 pages tak free, 9th page se lock
   const showPaywall = isPaid && !isPremium && index >= 8
 
-  // Razorpay Payment Handler
+  // ✅ PAYMENT HANDLER - Pura logic yahan hai
   const initiatePayment = async (amount: number) => {
     try {
       const res = await fetch("/api/create-order", { 
@@ -55,7 +54,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
       rzp.open();
     } catch (err) {
       console.error("Payment error:", err);
-      alert("Payment initiation failed. Please try again later.");
+      alert("Payment initiation failed. Please check your internet or API keys.");
     }
   };
 
@@ -70,7 +69,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const next = useCallback(() => go(1), [go])
   const prev = useCallback(() => go(-1), [go])
 
-  // Keyboard navigation
+  // Keyboard navigation logic
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (showPaywall && ((e.key === "ArrowRight" && !rtl) || (e.key === "ArrowLeft" && rtl))) return
@@ -82,7 +81,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
     return () => window.removeEventListener("keydown", onKey)
   }, [rtl, next, prev, showPaywall])
 
-  // Preload neighbours
+  // Image preloading
   useEffect(() => {
     const preload = (i: number) => {
       if (i < 0 || i >= total) return
@@ -135,6 +134,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
           </motion.div>
         </AnimatePresence>
 
+        {/* Paywall Overlay */}
         <AnimatePresence>
           {showPaywall && (
             <motion.div 
