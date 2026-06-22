@@ -28,15 +28,16 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
 
   const total = pages.length
 
-  // 🛑 LOCK LOGIC: Agar comic paid hai, user premium nahi hai, aur 6th page (index 5) par aa gaya hai
-  const showPaywall = isPaid && !isPremium && index >= 5
+  // 🛑 LOCK LOGIC: Agar comic paid hai, user premium nahi hai, aur 8th page (index 7) ke baad aa gaya hai
+  // Index 0 to 7 = 8 pages (Free), Index 8 onwards = Locked
+  const showPaywall = isPaid && !isPremium && index >= 8
 
   const go = useCallback(
     (dir: 1 | -1) => {
       setIndex((i) => {
         let nextIndex = i + dir
-        // Agar paywall active hone wala hai, toh index ko 5 par rok do
-        if (isPaid && !isPremium && nextIndex > 5) return 5
+        // Agar paywall active hone wala hai, toh index ko 8 par rok do
+        if (isPaid && !isPremium && nextIndex > 8) return 8
         return Math.min(Math.max(nextIndex, 0), total - 1)
       })
     },
