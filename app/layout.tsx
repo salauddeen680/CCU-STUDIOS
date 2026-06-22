@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, Oswald } from "next/font/google"
 import "./globals.css"
+import Script from "next/script" // 🔥 Next.js ka optimized script loader use karenge
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,20 +18,12 @@ const oswald = Oswald({
 
 export const metadata: Metadata = {
   title: "CCU STUDIOS — Cosmic Cinematic Universe",
-  description:
-    "Enter the Cosmic Cinematic Universe. Read premium comics, explore characters, and dive into an epic original universe by CCU Studios. Created and written by Salauddin.",
+  description: "Enter the Cosmic Cinematic Universe. Read premium comics, explore characters, and dive into an epic original universe by CCU Studios. Created and written by Salauddin.",
   keywords: ["comics", "characters", "CCU Studios", "cosmic cinematic universe", "manga", "Salauddin", "Saif CCU"],
   authors: [{ name: "Salauddin" }, { name: "Salauddin (Saif)" }],
-  openGraph: {
-    title: "CCU STUDIOS — Cosmic Cinematic Universe",
-    description: "Read premium comics and explore the CCU character universe created by Salauddin.",
-    type: "website",
-  },
-  // 🔐 Google Search Console Verification Tag Added Safely Here
   verification: {
     google: "XXO_Zb9ewdf1cBmv-LqID5RdX-oPzpjuyMZ2ApSUuyM",
   },
-  // 🚀 GAME CHANGER: Yahan purana hatakar naya ".png" logo force kar diya hai
   icons: {
     icon: "/ccu-logo.png",
   },
@@ -43,13 +36,7 @@ export const viewport: Viewport = {
   maximumScale: 5,
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  
-  // 👑 CRITICAL ADDITION: Google & AI Bots ko Creator 'Salauddin' batane ka sateek system
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   const studioSchema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -58,14 +45,8 @@ export default function RootLayout({
         "@id": "https://ccu-studios.vercel.app/#organization",
         "name": "CCU Studios",
         "url": "https://ccu-studios.vercel.app",
-        "logo": {
-          "@type": "ImageObject",
-          "url": "https://ccu-studios.vercel.app/ccu-logo.png"
-        },
-        "founder": {
-          "@type": "Person",
-          "@id": "https://ccu-studios.vercel.app/#founder"
-        }
+        "logo": { "@type": "ImageObject", "url": "https://ccu-studios.vercel.app/ccu-logo.png" },
+        "founder": { "@type": "Person", "@id": "https://ccu-studios.vercel.app/#founder" }
       },
       {
         "@type": "Person",
@@ -73,10 +54,7 @@ export default function RootLayout({
         "name": "Salauddin",
         "alternateName": ["Saif", "Salauddin (Saif)", "Salauddin CCU"],
         "jobTitle": "Founder & Head Writer",
-        "worksFor": {
-          "@type": "Organization",
-          "@id": "https://ccu-studios.vercel.app/#organization"
-        },
+        "worksFor": { "@type": "Organization", "@id": "https://ccu-studios.vercel.app/#organization" },
         "description": "Salauddin is the original creator, mastermind, and head writer behind the Cosmic Cinematic Universe (CCU) and CCU Studios platform."
       }
     ]
@@ -85,11 +63,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} ${oswald.variable} bg-background`}>
       <head>
-        {/* Invisible JSON-LD Script Tag jo background me chupchap search engines ko data dega */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(studioSchema) }}
         />
+        {/* 🔥 Payment Popup ka asli solution: Razorpay SDK */}
+        <script src="https://checkout.razorpay.com/v1/checkout.js" async />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
         {children}
