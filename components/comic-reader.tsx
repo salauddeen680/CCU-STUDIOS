@@ -25,11 +25,18 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const [isPremium, setIsPremium] = useState(false)
 
   const total = pages.length
+  // Paywall trigger: Agar Paid hai, Premium nahi hai, aur page index 8 (9th page) ya usse zyada hai
   const showPaywall = isPaid && !isPremium && index >= 8
 
-  // ✅ PAYMENT HANDLER - Pura logic yahan hai
   const initiatePayment = async (amount: number) => {
+    // 1. Check if Razorpay is loaded in the browser
+    if (typeof window === "undefined" || !(window as any).Razorpay) {
+      alert("Payment script load ho rahi hai, 2 second wait karo aur phir click karo!");
+      return;
+    }
+
     try {
+      // 2. API Call to generate Order ID
       const res = await fetch("/api/create-order", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" },
@@ -39,6 +46,7 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
       
       if (!data.orderId) throw new Error("Order creation failed");
 
+      // 3. Razorpay Options
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         order_id: data.orderId,
@@ -50,6 +58,8 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
         },
         theme: { color: "#dc2626" }
       };
+
+      // 4. Open Popup
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
     } catch (err) {
@@ -61,15 +71,16 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const go = useCallback((dir: 1 | -1) => {
     setIndex((i) => {
       let nextIndex = i + dir
-      if (isPaid && !isPremium && nextIndex > 8) return 8
+      // Agar paywall dikh raha hai toh aage mat badho
+      if (showPaywall && dir === 1) return i
       return Math.min(Math.max(nextIndex, 0), total - 1)
     })
-  }, [total, isPaid, isPremium])
+  }, [total, showPaywall])
 
   const next = useCallback(() => go(1), [go])
   const prev = useCallback(() => go(-1), [go])
 
-  // Keyboard navigation logic
+  // Keyboard navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (showPaywall && ((e.key === "ArrowRight" && !rtl) || (e.key === "ArrowLeft" && rtl))) return
