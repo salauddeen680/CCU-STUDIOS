@@ -47,7 +47,7 @@ export function useComics() {
             
             return { 
               id: d.id, 
-              slug: data.slug || "", // 💡 Slug ko cleanly fetch query me map kiya
+              slug: data.slug || "",
               title: data.title || "Untitled Comic",
               description: data.description || "",
               cover: data.cover || "",
@@ -92,7 +92,7 @@ export function useCharacters() {
             const data = d.data() || {}
             return { 
               id: d.id, 
-              slug: data.slug || "", // 💡 Character slug dynamic registry
+              slug: data.slug || "",
               name: data.name || "Unknown Character",
               bio: data.bio || "",
               image: data.image || "",
@@ -119,7 +119,6 @@ export function useCharacters() {
   return { characters: characters || [], loading }
 }
 
-// 👑 DUAL-QUERY FIX: Ab yeh ID aur Slug dono ko dynamic handle karega!
 export function useComic(idOrSlug: string) {
   const [comic, setComic] = useState<Comic | null>(null)
   const [loading, setLoading] = useState(true)
@@ -128,7 +127,6 @@ export function useComic(idOrSlug: string) {
     if (!idOrSlug) return
     setLoading(true)
 
-    // Strategy 1: Pehle query check karegi ki kya yeh Kisi Comic ka 'slug' hai?
     const slugQuery = query(collection(db, "comics"), where("slug", "==", idOrSlug))
     
     const unsubSlug = onSnapshot(slugQuery, (snapshot) => {
@@ -150,7 +148,6 @@ export function useComic(idOrSlug: string) {
         } as Comic)
         setLoading(false)
       } else {
-        // Strategy 2: Agar Slug match nahi hua (purani post), toh Backup me direct Doc ID dhoondega
         const docRef = doc(db, "comics", idOrSlug)
         getDoc(docRef).then((docSnap) => {
           if (docSnap.exists()) {
@@ -181,7 +178,6 @@ export function useComic(idOrSlug: string) {
   return { comic, loading }
 }
 
-// 👑 DUAL-QUERY FIX: Characters ke naam ke links ko bina crash kiye chalane ke liye
 export function useCharacter(idOrSlug: string) {
   const [character, setCharacter] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
@@ -314,10 +310,6 @@ export function useAllComments() {
   return { comments: comments || [], loading }
 }
 
-/* ------------------------------------------------------------------ */
-/* Mutations                                                           */
-/* ------------------------------------------------------------------ */
-
 export async function likeComic(id: string) {
   await updateDoc(doc(db, "comics", id), { likes: increment(1) })
 }
@@ -329,6 +321,7 @@ export async function likeCharacter(id: string) {
 export async function createComic(data: Omit<Comic, "id" | "likes" | "createdAt">) {
   return addDoc(collection(db, "comics"), {
     ...data,
+    slug: data.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
     likes: 0,
     createdAt: Date.now(),
   })
@@ -345,6 +338,7 @@ export async function deleteComic(id: string) {
 export async function createCharacter(data: Omit<Character, "id" | "likes" | "createdAt">) {
   return addDoc(collection(db, "characters"), {
     ...data,
+    slug: data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
     likes: 0,
     createdAt: Date.now(),
   })
