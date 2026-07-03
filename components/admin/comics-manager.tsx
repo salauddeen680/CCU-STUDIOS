@@ -132,17 +132,13 @@ export function ComicsManager() {
         timeline,
         cover: coverUrl || "",
         images: pageUrls,
-        ultimate: timeline === "purani",
+        // PERMANENT FIX LOGIC
+        ultimate: timeline === "purani" || timeline === "dusri",
         isPaid: isPaid,
         publishStatus: publishStatus 
       });
-      setTitle("");
-      setDescription("");
-      setCoverUrl("");
-      setPageUrls([]);
-      setUploadProgress("");
-      setIsPaid(false);
-      setPublishStatus("published");
+      setTitle(""); setDescription(""); setCoverUrl(""); setPageUrls([]);
+      setUploadProgress(""); setIsPaid(false); setPublishStatus("published");
       setIsOpen(false);
       alert("Comic Setup Successfully! 🎉");
     } catch (err) {
@@ -182,9 +178,10 @@ export function ComicsManager() {
         timeline: editTimeline,
         cover: editCoverUrl,
         images: editPageUrls,
-        ultimate: editTimeline === "purani",
-        isPaid: editIsPaid, // Explicitly passed
-        publishStatus: editPublishStatus // Explicitly passed
+        // PERMANENT FIX LOGIC
+        ultimate: editTimeline === "purani" || editTimeline === "dusri",
+        isPaid: editIsPaid,
+        publishStatus: editPublishStatus
       });
       setEditingComicId(null);
       alert("Comic Updated Successfully! 🔄");
@@ -222,7 +219,7 @@ export function ComicsManager() {
             <select value={timeline} onChange={(e) => setTimeline(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-zinc-300 focus:outline-none">
               <option value="asli">🟢 Asli Timeline (Real-Time Stories)</option>
               <option value="purani">🟡 Purani Timeline / Backstory (Ultimate Comic)</option>
-              <option value="dusri">🔴 Dusri Universe / Fan Fiction</option>
+              <option value="dusri">🔴 Dusri Universe / Ultimate Comic</option>
             </select>
           </div>
 
