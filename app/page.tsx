@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { SiteShell } from "@/components/site-shell"
 import { Hero } from "@/components/hero"
 import ComicSlider from "@/components/ComicSlider"
+import { HomeVideoLinks } from "@/components/home-video-links" // 👈 Naya Import add kiya hai
 import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 
@@ -78,24 +79,14 @@ export default async function HomePage() {
         <ComicSlider comics={allComics} />
       </div>
 
-      {/* 🎬 NAYA SECTION: Cinematic Video & Social Media Links */}
+      {/* 🎬 DYNAMIC SECTION: Cinematic Video Links & Social Media */}
       <section className="w-full bg-black pb-20 border-t border-zinc-900/50 pt-16 relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-red-900/10 blur-[100px] pointer-events-none"></div>
 
         <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-14 relative z-10">
           
-          {/* 🎥 Video Container */}
-          <div className="w-full max-w-4xl aspect-video bg-zinc-900 rounded-2xl overflow-hidden border border-zinc-800 shadow-2xl shadow-red-900/20">
-            <iframe
-              width="100%"
-              height="100%"
-              src="https://www.youtube.com/embed/IexNsGnrPWU" 
-              title="CCU Studios Featured Video"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-              allowFullScreen
-            ></iframe>
-          </div>
+          {/* 🔗 Yahan tumhare admin dashboard se dale gaye social links ek ke niche ek aayenge */}
+          <HomeVideoLinks />
 
           {/* 📱 Social Media Icons */}
           <div className="flex flex-col items-center gap-6">
