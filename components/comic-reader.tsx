@@ -4,8 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { AnimatePresence, motion } from "framer-motion"
 import {
-  ChevronLeft,
-  ChevronRight,
   X,
   ArrowLeftRight,
   Maximize,
@@ -16,27 +14,28 @@ type Props = {
   title: string
   pages: string[]
   isPaid?: boolean
+  freePages?: number // 👑 Dynamic free preview pages (0 = Full Paid, 9 = Teaser, etc.)
 }
 
-export function ComicReader({ title, pages, isPaid = false }: Props) {
+export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }: Props) {
   const [index, setIndex] = useState(0)
   const [rtl, setRtl] = useState(true)
   const [chrome, setChrome] = useState(true)
   const [isPremium, setIsPremium] = useState(false)
 
   const total = pages.length
-  // Paywall trigger: Agar Paid hai, Premium nahi hai, aur page index 8 (9th page) ya usse zyada hai
-  const showPaywall = isPaid && !isPremium && index >= 8
+  
+  // 👑 Dynamic Paywall trigger:
+  // Agar Paid hai aur Premium nahi hai, toh tab Paywall dikhayega jab current page free limit cross kare.
+  const showPaywall = isPaid && !isPremium && index >= freePages
 
   const initiatePayment = async (amount: number) => {
-    // 1. Check if Razorpay is loaded in the browser
     if (typeof window === "undefined" || !(window as any).Razorpay) {
       alert("Payment script load ho rahi hai, 2 second wait karo aur phir click karo!");
       return;
     }
 
     try {
-      // 2. API Call to generate Order ID
       const res = await fetch("/api/create-order", { 
         method: "POST", 
         headers: { "Content-Type": "application/json" },
@@ -46,7 +45,6 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
       
       if (!data.orderId) throw new Error("Order creation failed");
 
-      // 3. Razorpay Options
       const options = {
         key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         order_id: data.orderId,
@@ -59,7 +57,6 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
         theme: { color: "#dc2626" }
       };
 
-      // 4. Open Popup
       const rzp = new (window as any).Razorpay(options);
       rzp.open();
     } catch (err) {
@@ -71,7 +68,6 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
   const go = useCallback((dir: 1 | -1) => {
     setIndex((i) => {
       let nextIndex = i + dir
-      // Agar paywall dikh raha hai toh aage mat badho
       if (showPaywall && dir === 1) return i
       return Math.min(Math.max(nextIndex, 0), total - 1)
     })
@@ -107,15 +103,16 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
 
   if (total === 0) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-background text-center">
+      <div className="flex h-screen flex-col items-center justify-center gap-3 bg-black text-center text-white">
         <p className="font-display text-lg">No pages uploaded yet</p>
-        <Link href="/comics" className="text-sm text-primary underline">Back to comics</Link>
+        <Link href="/comics" className="text-sm text-red-500 underline">Back to comics</Link>
       </div>
     )
   }
 
   return (
     <div className="relative h-screen w-full select-none overflow-hidden bg-black">
+      {/* Tap Overlay Screen Area */}
       <div className="relative h-full w-full" onClick={() => setChrome((c) => !c)}>
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
@@ -133,68 +130,93 @@ export function ComicReader({ title, pages, isPaid = false }: Props) {
                 else if (info.offset.x > 80) rtl ? next() : prev()
               }
             }}
-            className="absolute inset-0 flex items-center justify-center"
+            className="absolute inset-0 flex items-center justify-center p-0"
           >
             <img
               src={pages[index] || "/placeholder.svg"}
               alt={`${title} — page ${index + 1}`}
               loading="eager"
-              className={`max-h-full max-w-full object-contain transition-all duration-700 ${showPaywall ? "blur-xl opacity-40 scale-105" : ""}`}
+              className={`h-full w-full object-contain transition-all duration-500 ${
+                showPaywall ? "blur-xl opacity-30 scale-105" : ""
+              }`}
               draggable={false}
             />
           </motion.div>
         </AnimatePresence>
 
-        {/* Paywall Overlay */}
+        {/* Dynamic Paywall Overlay */}
         <AnimatePresence>
           {showPaywall && (
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/60 p-6 text-center"
+              className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/80 p-6 text-center"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-red-900/20 border border-red-900/50 shadow-[0_0_50px_rgba(220,38,38,0.3)]">
                 <Lock className="h-8 w-8 text-red-500" />
               </div>
-              <h2 className="mb-2 font-display text-3xl font-black tracking-widest text-white uppercase drop-shadow-lg">Premium Access</h2>
+              <h2 className="mb-2 font-display text-3xl font-black tracking-widest text-white uppercase drop-shadow-lg">
+                {freePages === 0 ? "Full Premium Issue" : "Preview Ended"}
+              </h2>
               <p className="mb-8 max-w-md text-sm text-zinc-300 font-sans leading-relaxed">
                 Aage ki bawal kahani aur epic cinematic action dekhne ke liye is issue ko khareedein ya CCU VIP Club ka hissa banein.
               </p>
               <div className="flex w-full max-w-sm flex-col gap-4">
-                <button onClick={() => initiatePayment(19)} className="group relative w-full overflow-hidden rounded-full bg-red-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.4)]">Buy This Issue — ₹19</button>
-                <button onClick={() => initiatePayment(69)} className="w-full rounded-full border border-zinc-700 bg-zinc-900/80 py-3.5 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-zinc-800 hover:scale-[1.02] active:scale-95">Join CCU VIP Club — ₹69/mo</button>
+                <button onClick={() => initiatePayment(19)} className="group relative w-full overflow-hidden rounded-full bg-red-600 py-3.5 text-sm font-bold text-white transition-all hover:bg-red-700 hover:scale-[1.02] active:scale-95 shadow-[0_0_20px_rgba(220,38,38,0.4)]">
+                  Buy This Issue — ₹19
+                </button>
+                <button onClick={() => initiatePayment(69)} className="w-full rounded-full border border-zinc-700 bg-zinc-900/80 py-3.5 text-sm font-bold text-white backdrop-blur-md transition-all hover:bg-zinc-800 hover:scale-[1.02] active:scale-95">
+                  Join CCU VIP Club — ₹69/mo
+                </button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Clean Tap Left/Right Invisible Zones */}
         {!showPaywall && (
           <>
-            <button aria-label="Previous area" onClick={(e) => { e.stopPropagation(); rtl ? next() : prev(); }} className="absolute inset-y-0 left-0 w-1/3 z-10" />
-            <button aria-label="Next area" onClick={(e) => { e.stopPropagation(); rtl ? prev() : next(); }} className="absolute inset-y-0 right-0 w-1/3 z-10" />
+            <button 
+              aria-label="Previous page" 
+              onClick={(e) => { e.stopPropagation(); rtl ? next() : prev(); }} 
+              className="absolute inset-y-0 left-0 w-1/2 z-10 cursor-pointer focus:outline-none" 
+            />
+            <button 
+              aria-label="Next page" 
+              onClick={(e) => { e.stopPropagation(); rtl ? prev() : next(); }} 
+              className="absolute inset-y-0 right-0 w-1/2 z-10 cursor-pointer focus:outline-none" 
+            />
           </>
         )}
       </div>
 
+      {/* Top Header Bar */}
       <AnimatePresence>
         {chrome && (
-          <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="glass-strong absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-3 px-4 py-3">
-            <Link href="/comics" className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-900/80 text-white hover:text-red-400 transition-colors border border-zinc-800"><X className="h-4 w-4" /></Link>
+          <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="glass-strong absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-3 px-4 py-3 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
+            <Link href="/comics" className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-900/80 text-white hover:text-red-400 transition-colors border border-zinc-800">
+              <X className="h-4 w-4" />
+            </Link>
             <p className="line-clamp-1 flex-1 text-center font-sans tracking-wider text-sm font-bold text-white uppercase">{title}</p>
-            <button onClick={(e) => { e.stopPropagation(); setRtl((r) => !r); }} className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-2.5 py-2 text-[11px] font-bold text-white hover:text-primary transition-colors"><ArrowLeftRight className="h-4 w-4" />{rtl ? "RTL" : "LTR"}</button>
+            <button onClick={(e) => { e.stopPropagation(); setRtl((r) => !r); }} className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-2.5 py-2 text-[11px] font-bold text-white hover:text-red-500 transition-colors">
+              <ArrowLeftRight className="h-4 w-4" />{rtl ? "RTL" : "LTR"}
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Bottom Progress Bar (Clean Page Counter without Next/Prev buttons) */}
       <AnimatePresence>
         {chrome && (
-          <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} className="glass-strong absolute inset-x-0 bottom-0 z-50 px-4 py-3">
-            <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-zinc-800"><div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${progress}%` }} /></div>
-            <div className="flex items-center justify-between">
-              <button onClick={(e) => { e.stopPropagation(); prev(); }} disabled={index === 0} className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-xs font-bold text-white disabled:opacity-40 hover:bg-zinc-800 transition-all"><ChevronLeft className="h-4 w-4" /> Prev</button>
-              <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-400 font-sans tracking-widest"><Maximize className="h-3.5 w-3.5" />{index + 1} / {total}</span>
-              <button onClick={(e) => { e.stopPropagation(); next(); }} disabled={index === total - 1 || showPaywall} className="inline-flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 py-2 text-xs font-bold text-white disabled:opacity-40 hover:bg-zinc-800 transition-all">Next <ChevronRight className="h-4 w-4" /></button>
+          <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="glass-strong absolute inset-x-0 bottom-0 z-50 px-4 py-3 bg-zinc-950/80 backdrop-blur-md border-t border-zinc-800">
+            <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-zinc-800">
+              <div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="flex items-center justify-center">
+              <span className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 font-sans tracking-widest">
+                <Maximize className="h-3.5 w-3.5 text-red-500" /> Page {index + 1} of {total}
+              </span>
             </div>
           </motion.div>
         )}
