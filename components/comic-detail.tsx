@@ -2,11 +2,10 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { BookOpen, ChevronLeft, Layers, Video } from "lucide-react"
+import { BookOpen, ChevronLeft, Layers, Video, ChevronDown, ChevronUp } from "lucide-react"
 import { useComic } from "@/lib/data"
 import { Comments } from "./comments"
 
-// Video Data ke liye TypeScript structure (Interface)
 interface VideoLink {
   id: string
   title: string
@@ -17,8 +16,8 @@ interface VideoLink {
 export function ComicDetail({ id }: { id: string }) {
   const { comic, loading } = useComic(id)
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([])
+  const [isExpanded, setIsExpanded] = useState(false)
 
-  // 📺 Admin Panel se lagaye gaye Videos aur Social Links fetch karne ke liye
   useEffect(() => {
     async function fetchSocialLinks() {
       try {
@@ -61,12 +60,14 @@ export function ComicDetail({ id }: { id: string }) {
   }
 
   const cover = comic.cover || comic.images?.[0]
+  const descriptionText = comic.description || ""
+  const isLongText = descriptionText.length > 180
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <Link
         href="/comics"
-        className="mb-5 inline-flex items-center gap-1 text-sm text-muted hover:text-primary"
+        className="mb-5 inline-flex items-center gap-1 text-sm text-muted hover:text-primary transition-colors"
       >
         <ChevronLeft className="h-4 w-4" /> All comics
       </Link>
@@ -81,35 +82,56 @@ export function ComicDetail({ id }: { id: string }) {
           />
         </div>
 
-        <div>
-          {comic.ultimate && (
-            <span className="inline-block rounded-full border border-gold/50 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gold">
-              Ultimate Comic
-            </span>
-          )}
-          <h1 className="mt-2 text-balance font-display text-3xl font-bold">
-            {comic.title}
-          </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <Layers className="h-4 w-4" /> {comic.images?.length || 0} pages
-            </span>
-            {/* ❤️ LIKE BUTTON YAHAN SE SAFELY DELETE KAR DIYA GAYA HAI */}
-          </div>
-          <p className="mt-4 text-pretty leading-relaxed text-foreground/85">
-            {comic.description}
-          </p>
+        <div className="flex flex-col justify-between">
+          <div>
+            {comic.ultimate && (
+              <span className="inline-block rounded-full border border-gold/50 bg-gold/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-gold">
+                Ultimate Comic
+              </span>
+            )}
+            <h1 className="mt-2 text-balance font-display text-2xl font-bold sm:text-3xl">
+              {comic.title}
+            </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <Layers className="h-4 w-4" /> {comic.images?.length || 0} pages
+              </span>
+            </div>
 
-          <Link
-            href={`/comics/${comic.id}/read`}
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
-          >
-            <BookOpen className="h-4 w-4" /> Read Now
-          </Link>
+            {/* 📝 Summary Block with Read More Toggle */}
+            <div className="mt-4">
+              <p className={`text-sm leading-relaxed text-foreground/85 transition-all ${!isExpanded && isLongText ? "line-clamp-3" : ""}`}>
+                {descriptionText}
+              </p>
+              
+              {isLongText && (
+                <button
+                  type="button"
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="mt-2 inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline focus:outline-none"
+                >
+                  {isExpanded ? (
+                    <>Show Less <ChevronUp className="h-3 w-3" /></>
+                  ) : (
+                    <>Read More <ChevronDown className="h-3 w-3" /></>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <Link
+              href={`/comics/${comic.id}/read`}
+              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
+            >
+              <BookOpen className="h-4 w-4" /> Read Now
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* 🔴 NEW FEATURE: Ek ke niche ek bade Video Banners / Posters (Jaise Comics Dikhti Hain) */}
+      {/* 🔴 Official Videos & Social Updates Banners */}
       {videoLinks.length > 0 && (
         <div className="mt-12 border-t border-border pt-8">
           <h2 className="font-display text-xl font-bold tracking-wide flex items-center gap-2">
@@ -131,7 +153,6 @@ export function ComicDetail({ id }: { id: string }) {
                     alt={link.title}
                     className="w-full h-full object-cover transition duration-300 group-hover:scale-105"
                   />
-                  {/* Dark overlay for text readability */}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6">
