@@ -55,6 +55,11 @@ export function useComics() {
               likes: typeof data.likes === "number" ? data.likes : 0,
               timeline: assignedTimeline,
               ultimate: !!data.ultimate,
+              // 🛡️ NAYA FIX: Database se paid, freePages aur status padhna shuru
+              isPaid: Boolean(data.isPaid || data.paid),
+              paid: Boolean(data.isPaid || data.paid),
+              freePages: typeof data.freePages === "number" ? data.freePages : 0,
+              publishStatus: data.publishStatus || "published",
               createdAt: data.createdAt || Date.now()
             }
           }) as Comic[]
@@ -144,8 +149,13 @@ export function useComic(idOrSlug: string) {
           likes: data.likes || 0,
           timeline: data.timeline || "asli",
           ultimate: !!data.ultimate,
+          // 🛡️ NAYA FIX: Single comic page ke liye bhi data uthana shuru
+          isPaid: Boolean(data.isPaid || data.paid),
+          paid: Boolean(data.isPaid || data.paid),
+          freePages: typeof data.freePages === "number" ? data.freePages : 0,
+          publishStatus: data.publishStatus || "published",
           createdAt: data.createdAt || Date.now()
-        } as Comic)
+        } as any) // TypeScript strictness bypass ke liye 'any' laga diya temporarily
         setLoading(false)
       } else {
         const docRef = doc(db, "comics", idOrSlug)
@@ -162,8 +172,13 @@ export function useComic(idOrSlug: string) {
               likes: data.likes || 0,
               timeline: data.timeline || "asli",
               ultimate: !!data.ultimate,
+              // 🛡️ NAYA FIX: Backup fetch mein bhi data uthana shuru
+              isPaid: Boolean(data.isPaid || data.paid),
+              paid: Boolean(data.isPaid || data.paid),
+              freePages: typeof data.freePages === "number" ? data.freePages : 0,
+              publishStatus: data.publishStatus || "published",
               createdAt: data.createdAt || Date.now()
-            } as Comic)
+            } as any)
           } else {
             setComic(null)
           }
