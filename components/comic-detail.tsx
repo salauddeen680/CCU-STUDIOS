@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { BookOpen, ChevronLeft, Layers, Video, ChevronDown, ChevronUp } from "lucide-react"
+import { BookOpen, ChevronLeft, Layers, Video, ChevronDown, ChevronUp, Lock } from "lucide-react"
 import { useComic } from "@/lib/data"
 import { Comments } from "./comments"
 
@@ -62,6 +62,9 @@ export function ComicDetail({ id }: { id: string }) {
   const cover = comic.cover || comic.images?.[0]
   const descriptionText = comic.description || ""
   const isLongText = descriptionText.length > 180
+  
+  // 🛡️ MAIN LOGIC: Yahan hum check kar rahe hain ki comic paid hai ya nahi
+  const isPremium = comic.isPaid === true || comic.paid === true
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -98,7 +101,7 @@ export function ComicDetail({ id }: { id: string }) {
               </span>
             </div>
 
-            {/* 📝 Summary Block with Read More Toggle */}
+            {/* 📝 Summary Block */}
             <div className="mt-4">
               <p className={`text-sm leading-relaxed text-foreground/85 transition-all ${!isExpanded && isLongText ? "line-clamp-3" : ""}`}>
                 {descriptionText}
@@ -121,12 +124,37 @@ export function ComicDetail({ id }: { id: string }) {
           </div>
 
           <div className="mt-6">
-            <Link
-              href={`/comics/${comic.id}/read`}
-              className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110"
-            >
-              <BookOpen className="h-4 w-4" /> Read Now
-            </Link>
+            {/* 🚦 PAID VS FREE BUTTON LOGIC */}
+            {isPremium ? (
+              <div className="flex flex-col sm:flex-row gap-3">
+                {/* 📖 9-Page Preview Button (For Paid Comics) */}
+                <Link
+                  href={`/comics/${comic.id}/read`}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-zinc-800 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-zinc-700"
+                >
+                  <BookOpen className="h-4 w-4" /> Read Preview
+                </Link>
+                
+                {/* 🔒 Premium Unlock Button */}
+                <a
+                  // 👇 Yahan apna WhatsApp number daal lena "91" ke aage
+                  href={`https://wa.me/910000000000?text=Hi CCU Studios, I want to read the premium comic: ${comic.title}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-600 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-yellow-500"
+                >
+                  <Lock className="h-4 w-4" /> Unlock Full Comic
+                </a>
+              </div>
+            ) : (
+              /* 🟢 Free Full Comic Button */
+              <Link
+                href={`/comics/${comic.id}/read`}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white shadow-glow transition hover:brightness-110 sm:w-auto"
+              >
+                <BookOpen className="h-4 w-4" /> Read Full Comic (Free)
+              </Link>
+            )}
           </div>
         </div>
       </div>
