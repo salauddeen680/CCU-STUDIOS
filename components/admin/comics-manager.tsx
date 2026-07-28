@@ -53,9 +53,10 @@ export function ComicsManager() {
     }
   };
 
-  // Helper function to detect type from comic object
+  // 🛡️ MAIN FIX 1: Ab ye purani aur nayi dono comics ko sahi se pehchanega
   const detectAccessType = (comic: any): "free" | "teaser_9" | "full_paid" => {
-    if (!comic.isPaid) return "free";
+    const isPremium = comic.isPaid === true || comic.paid === true; // Check both legacy & new
+    if (!isPremium) return "free";
     if (comic.freePages === 9) return "teaser_9";
     return "full_paid";
   };
@@ -99,45 +100,6 @@ export function ComicsManager() {
     }
   };
 
-  // 📥 Imgbb Bulk Loop Pipeline for Editor
-  const handleEditPagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
-
-    setEditPagesUploading(true);
-    const fileArray = Array.from(files);
-    const tempUrls: string[] = [];
-    setEditUploadProgress(`Processing 0/${fileArray.length} pages...`);
-
-    try {
-      let count = 0;
-      for (const file of fileArray) {
-        count++;
-        setEditUploadProgress(`Uploading page ${count}/${fileArray.length}...`);
-        const formData = new FormData();
-        formData.append("image", file);
-
-        const res = await fetch("https://api.imgbb.com/1/upload?key=316329635816225ced11f24f7cb154d3", {
-          method: "POST",
-          body: formData,
-        });
-        const resData = await res.json();
-        if (resData.success) {
-          tempUrls.push(resData.data.url);
-        } else {
-          throw new Error(`Failed at page ${count}`);
-        }
-      }
-      setEditPageUrls((prev) => [...prev, ...tempUrls]);
-      setEditUploadProgress("All pages uploaded successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Kuch pages uploads fail ho gaye bhai.");
-    } finally {
-      setEditPagesUploading(false);
-    }
-  };
-
   // 💾 NEW COMIC API Handler
   const handleSaveComic = async () => {
     if (!title.trim() || !description.trim()) {
@@ -154,7 +116,8 @@ export function ComicsManager() {
         cover: coverUrl || "",
         images: pageUrls,
         ultimate: timeline === "purani" || timeline === "dusri",
-        isPaid,
+        isPaid: isPaid,
+        paid: isPaid, // 🛡️ Database dono fields update karega safety ke liye
         freePages,
         publishStatus
       });
@@ -162,12 +125,12 @@ export function ComicsManager() {
       setUploadProgress(""); setAccessType("free"); setPublishStatus("published");
       setIsOpen(false);
       alert("Comic Setup Successfully! 🎉");
+      window.location.reload(); // 🛡️ MAIN FIX 2: Data turant refresh hoga save hone ke baad
     } catch (err) {
       console.error(err);
       alert("Database error.");
-    } finally {
       setIsSaving(false);
-    }
+    } 
   };
 
   // ✏️ Setup Editor values when clicking Edit
@@ -201,18 +164,19 @@ export function ComicsManager() {
         cover: editCoverUrl,
         images: editPageUrls,
         ultimate: editTimeline === "purani" || editTimeline === "dusri",
-        isPaid,
+        isPaid: isPaid,
+        paid: isPaid, // 🛡️ Safety fallback
         freePages,
         publishStatus: editPublishStatus
       });
       setEditingComicId(null);
       alert("Comic Updated Successfully! 🔄");
+      window.location.reload(); // 🛡️ MAIN FIX 2: Page reload hoga taaki purana cache data na dikhe
     } catch (err) {
       console.error(err);
       alert("Database update crash standard issue.");
-    } finally {
       setIsSaving(false);
-    }
+    } 
   };
 
   return (
@@ -254,7 +218,6 @@ export function ComicsManager() {
               </select>
             </div>
 
-            {/* 👑 NAYA SLIM ACCESS DROPDOWN */}
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase">Content Access</label>
               <select 
@@ -299,7 +262,7 @@ export function ComicsManager() {
               <div key={comic.id} className="flex flex-col py-3">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-3">
-                    {comic.isPaid && <Lock className="h-3 w-3 text-red-500" title="Premium Comic" />}
+                    {(comic.isPaid || comic.paid) && <Lock className="h-3 w-3 text-red-500" title="Premium Comic" />}
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
                         {comic.title} 
@@ -317,7 +280,7 @@ export function ComicsManager() {
                     <button type="button" onClick={() => { setIsOpen(false); editingComicId === comic.id ? setEditingComicId(null) : startEditing(comic); }} className="text-zinc-400 hover:text-blue-500 transition-colors">
                       <Edit2 className="h-4 w-4" />
                     </button>
-                    <button type="button" onClick={async () => { if(confirm("Delete?")) await deleteComic(comic.id) }} className="text-zinc-600 hover:text-red-500 transition-colors">
+                    <button type="button" onClick={async () => { if(confirm("Delete?")) await deleteComic(comic.id); window.location.reload(); }} className="text-zinc-600 hover:text-red-500 transition-colors">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -333,6 +296,16 @@ export function ComicsManager() {
                     <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white" />
                     <textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white" />
                     
+                    {/* 🛡️ MAIN FIX 3: Timeline change karne ka option gayab tha editor mein, ab yahan daal diya hai */}
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-semibold text-zinc-500 uppercase">Select Timeline</label>
+                      <select value={editTimeline} onChange={(e) => setEditTimeline(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300">
+                        <option value="asli">🟢 Asli Timeline</option>
+                        <option value="purani">🟡 Purani Timeline / Backstory</option>
+                        <option value="dusri">🔴 Dusri Universe</option>
+                      </select>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3 py-2">
                       <div className="space-y-1">
                         <label className="text-[10px] font-semibold text-zinc-500 uppercase">Release Status</label>
