@@ -15,13 +15,15 @@ export function ReaderClient({ id }: { id: string }) {
       </div>
     )
 
-  // 🔥 FIX: Yahan 'true' set kar do, ab database mein kuch bhi ho, ye 'Paid' hi dikhega.
-  // Tumhein ab database mein kuch edit nahi karna padega.
+  // 🛡️ ASLI FIX: Yahan hum zabardasti 'true' nahi bhejenge, balki database se check karenge
+  const isPremium = comic.isPaid === true || comic.paid === true
+
   return (
     <ComicReader 
       title={comic.title} 
       pages={comic.images || []} 
-      isPaid={true} 
+      isPaid={isPremium} // 👈 Ab ye sach mein check karega ki comic free hai ya premium
+      freePages={9} // 👈 Premium comics ke liye 9 pages ka free preview bhi de diya
     />
   )
 }
