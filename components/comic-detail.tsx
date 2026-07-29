@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { BookOpen, ChevronLeft, Layers, Video, ChevronDown, ChevronUp, Lock } from "lucide-react"
+import { BookOpen, ChevronLeft, Layers, Video, ChevronDown, ChevronUp, Lock, Loader2 } from "lucide-react"
 import { useComic } from "@/lib/data"
 import { Comments } from "./comments"
 
@@ -17,6 +17,9 @@ export function ComicDetail({ id }: { id: string }) {
   const { comic, loading } = useComic(id)
   const [videoLinks, setVideoLinks] = useState<VideoLink[]>([])
   const [isExpanded, setIsExpanded] = useState(false)
+  
+  // 🛡️ RAZORPAY STATE
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false)
 
   useEffect(() => {
     async function fetchSocialLinks() {
@@ -32,6 +35,66 @@ export function ComicDetail({ id }: { id: string }) {
     }
     fetchSocialLinks()
   }, [])
+
+  // 💳 RAZORPAY SCRIPT LOADER
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement("script")
+      script.src = "https://checkout.razorpay.com/v1/checkout.js"
+      script.onload = () => {
+        resolve(true)
+      }
+      script.onerror = () => {
+        resolve(false)
+      }
+      document.body.appendChild(script)
+    })
+  }
+
+  // 💸 RAZORPAY PAYMENT HANDLER
+  const handlePayment = async () => {
+    setIsProcessingPayment(true)
+    
+    const res = await loadRazorpayScript()
+    if (!res) {
+      alert("Razorpay SDK failed to load. Please check your connection.")
+      setIsProcessingPayment(false)
+      return
+    }
+
+    // Razorpay Options Setup
+    const options = {
+      key: "YOUR_RAZORPAY_KEY_ID", // ⚠️ Apna Razorpay Key yahan daalna
+      amount: 4900, // Amount in paise (e.g., 4900 = ₹49.00)
+      currency: "INR",
+      name: "CCU Studios",
+      description: `Unlock Comic: ${comic?.title}`,
+      image: comic?.cover || "https://ccu-studios.vercel.app/logo.png", // Aapka logo ya comic cover
+      handler: function (response: any) {
+        // Payment successful hone ke baad kya hoga:
+        console.log("Payment ID:", response.razorpay_payment_id)
+        alert(`Payment Successful! 🎉\nPayment ID: ${response.razorpay_payment_id}`)
+        // TODO: Yahan backend call karke user ka access save kar sakte ho
+      },
+      prefill: {
+        name: "", // User ka naam
+        email: "", // User ka email
+        contact: "", // User ka number
+      },
+      theme: {
+        color: "#ca8a04", // Aapke CCU theme ka yellow color
+      },
+    }
+
+    const paymentObject = new (window as any).Razorpay(options)
+    paymentObject.open()
+    
+    paymentObject.on("payment.failed", function (response: any) {
+      alert("Payment Failed. Reason: " + response.error.description)
+    })
+
+    setIsProcessingPayment(false)
+  }
 
   if (loading) {
     return (
@@ -135,16 +198,19 @@ export function ComicDetail({ id }: { id: string }) {
                   <BookOpen className="h-4 w-4" /> Read Preview
                 </Link>
                 
-                {/* 🔒 Premium Unlock Button */}
-                <a
-                  // 👇 Yahan apna WhatsApp number daal lena "91" ke aage
-                  href={`https://wa.me/910000000000?text=Hi CCU Studios, I want to read the premium comic: ${comic.title}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-600 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-yellow-500"
+                {/* 🔒 Premium Unlock Button (RAZORPAY) */}
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessingPayment}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-yellow-600 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:bg-yellow-500 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <Lock className="h-4 w-4" /> Unlock Full Comic
-                </a>
+                  {isProcessingPayment ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Lock className="h-4 w-4" />
+                  )}
+                  {isProcessingPayment ? "Processing..." : "Unlock Full Comic"}
+                </button>
               </div>
             ) : (
               /* 🟢 Free Full Comic Button */
