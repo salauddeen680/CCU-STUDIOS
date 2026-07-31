@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Inter, Oswald } from "next/font/google"
 import "./globals.css"
 import Script from "next/script" // 🔥 Next.js ka optimized script loader use karenge
+import { Analytics } from "@vercel/analytics/react" // 🔥 Vercel Analytics Import Kiya
 
 const inter = Inter({
   subsets: ["latin"],
@@ -72,6 +73,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
         {children}
+        <Analytics /> {/* 🔥 Vercel Analytics Component yahan laga diya */}
       </body>
     </html>
   )
