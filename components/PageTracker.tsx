@@ -1,33 +1,52 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { db } from "@/lib/firebase"; // Dhyan rahe yeh aapki firebase config ka sahi rasta ho
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getApps, getApp, initializeApp } from "firebase/app";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+
+// 🔥 Firebase Config Setup
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+};
+
+const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 export default function PageTracker() {
   const pathname = usePathname();
+  const tracked = useRef(""); // Double entry rokne ke liye
 
   useEffect(() => {
-    // Agar page load ho gaya hai, toh Firebase mein entry daal do
     if (!pathname) return;
+    if (tracked.current === pathname) return; // Agar same page dobara render ho raha hai toh ruk jao
 
-    const recordView = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      tracked.current = pathname;
+      
+      // 🔥 Agar user login hai toh uski Email/Name, warna Guest
+      const userInfo = user ? (user.email || user.displayName || "Logged In User") : "Guest / Visitor";
+
       try {
         await addDoc(collection(db, "pageViews"), {
-          page: pathname, // Kaunsa page khola gaya hai (jaise: /comics/genesis-of-destruction)
-          timestamp: serverTimestamp(), // Kis waqt khola gaya
-          userType: "Guest / Visitor", // Bina login wale logo ke liye
+          page: pathname,
+          timestamp: serverTimestamp(),
+          userEmail: userInfo, // Yahan asli ID save hogi
         });
       } catch (error) {
         console.error("Tracking Error:", error);
       }
-    };
+    });
 
-    // Har baar naya page khulne par entry save hogi
-    recordView();
+    return () => unsubscribe();
   }, [pathname]);
 
-  return null; // Yeh screen par kuch nahi dikhayega, sirf background mein chalega
+  return null;
 }
-
