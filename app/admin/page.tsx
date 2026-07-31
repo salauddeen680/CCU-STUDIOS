@@ -5,19 +5,18 @@ import { Suspense, useState, useEffect } from "react"
 import { 
   Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
   MessageSquare, LogOut, Video, Activity 
-} from "lucide-react" // 🔥 Activity icon add kiya analytics ke liye
+} from "lucide-react" 
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
-import { getFirestore, collection, query, orderBy, getDocs } from "firebase/firestore" // 🔥 Firestore import kiya data fetch karne ke liye
+import { getFirestore, collection, query, orderBy, getDocs } from "firebase/firestore" 
 
 // 📥 Existing Core Components
 import { ComicsManager } from "@/components/admin/comics-manager"
 import { CharactersManager } from "@/components/admin/characters-manager"
 import { EngagementPanel } from "@/components/admin/engagement-panel"
-// 📺 Naya Video Manager Component Jo Hum Agli File Mein Banayenge
 import { VideoLinksManager } from "@/components/admin/video-links-manager"
 
-// 🔐 Secure Configuration using Vercel Environment Variables — NO CHANGES AT ALL
+// 🔐 Secure Configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -29,11 +28,11 @@ const firebaseConfig = {
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 const auth = getAuth(app)
-const db = getFirestore(app) // 🔥 Database initialize kiya
+const db = getFirestore(app) 
 
 const ADMIN_ACCESS_KEY = "ccu-admin-2026"
 
-// 🔥 Naya Component: Live Traffic Panel (Firebase se views laane ke liye)
+// 🔥 ADVANCED LIVE TRAFFIC PANEL (Totals & Emails)
 function LiveTrafficPanel() {
   const [views, setViews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -57,36 +56,63 @@ function LiveTrafficPanel() {
     fetchViews()
   }, [])
 
-  if (loading) return <div className="flex gap-2 items-center text-red-500 font-bold"><Loader2 className="animate-spin h-5 w-5"/> Loading Live Traffic...</div>
+  if (loading) return <div className="flex gap-2 items-center text-red-500 font-bold"><Loader2 className="animate-spin h-5 w-5"/> Loading Live Analytics...</div>
+
+  // 🔥 Calculations for Dashboard
+  const totalViews = views.length;
+  const loggedInViews = views.filter(v => v.userEmail && v.userEmail !== "Guest / Visitor").length;
 
   return (
     <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 shadow-lg shadow-black">
-      <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-4">
+      
+      {/* HEADER */}
+      <div className="flex items-center gap-3 mb-4 border-b border-zinc-800 pb-4">
         <Activity className="h-6 w-6 text-green-500 animate-pulse" />
         <div>
-          <h2 className="text-xl font-bold text-white">Live Visitor Traffic</h2>
-          <p className="text-xs text-zinc-400">Track all users and guests currently visiting the platform.</p>
+          <h2 className="text-xl font-bold text-white">Advanced Traffic Analytics</h2>
+          <p className="text-xs text-zinc-400">Track all page views, visitors, and logged-in users.</p>
+        </div>
+      </div>
+
+      {/* STATS CARDS */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg flex flex-col justify-center items-center">
+          <p className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Total Views</p>
+          <h3 className="text-3xl font-black text-white">{totalViews}</h3>
+        </div>
+        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg flex flex-col justify-center items-center">
+          <p className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Logged-In Visits</p>
+          <h3 className="text-3xl font-black text-red-500">{loggedInViews}</h3>
         </div>
       </div>
       
-      <div className="h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+      {/* TRAFFIC LIST */}
+      <div className="h-[500px] overflow-y-auto pr-2 custom-scrollbar">
         <div className="space-y-3">
           {views.length === 0 ? (
-            <p className="text-zinc-500 text-sm">No traffic data recorded yet. Background tracker is active.</p>
+            <p className="text-zinc-500 text-sm text-center mt-10">No traffic data recorded yet.</p>
           ) : (
-            views.map((view) => (
-              <div key={view.id} className="p-4 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-2 transition-colors">
-                <div>
-                  <p className="text-sm font-mono text-green-400 break-all">{view.page}</p>
-                  <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider font-bold">
-                    User: {view.userType || "Guest"}
-                  </p>
+             views.map((view) => {
+              // Check if user is guest or actual email
+              const isGuest = !view.userEmail || view.userEmail === "Guest / Visitor" || view.userType === "Guest / Visitor";
+              
+              return (
+                <div key={view.id} className="p-4 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-2 transition-colors">
+                  <div>
+                    <p className="text-sm font-mono text-green-400 break-all">{view.page}</p>
+                    <p className="text-xs mt-1 uppercase tracking-wider font-bold flex items-center gap-2">
+                      User: 
+                      <span className={isGuest ? "text-zinc-500" : "text-white"}>
+                        {view.userEmail || view.userType || "Guest / Visitor"}
+                      </span>
+                    </p>
+                  </div>
+                  <div className="text-xs text-zinc-400 sm:text-right shrink-0 bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800">
+                    {view.timestamp?.toDate ? view.timestamp.toDate().toLocaleString() : "Just now"}
+                  </div>
                 </div>
-                <div className="text-xs text-zinc-400 sm:text-right shrink-0 bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800">
-                  {view.timestamp?.toDate ? view.timestamp.toDate().toLocaleString() : "Just now"}
-                </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
       </div>
@@ -105,8 +131,7 @@ function AdminGate() {
   const [loginError, setLoginError] = useState("")
   const [loginLoading, setLoginLoading] = useState(false)
 
-  // 🎛️ Dashboard Navigation States
-  const [activeTab, setActiveTab] = useState("traffic") // 🔥 Default tab ko traffic kar diya taaki login karte hi views dikhein
+  const [activeTab, setActiveTab] = useState("traffic") 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -152,7 +177,6 @@ function AdminGate() {
     )
   }
 
-  // 🔐 1. DESIGNER LOGIN PANEL — UNTOUCHED & SECURE
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black px-4 font-sans">
@@ -178,7 +202,6 @@ function AdminGate() {
     )
   }
 
-  // 🚀 2. REAL PREMIUM ADMIN DASHBOARD UI
   return (
     <div className="flex min-h-screen bg-zinc-950 text-zinc-100 font-sans">
       
@@ -192,7 +215,7 @@ function AdminGate() {
 
           <nav className="space-y-2">
             {[
-              { id: "traffic", label: "Live Traffic", icon: Activity }, // 🔥 Naya Traffic Tab
+              { id: "traffic", label: "Live Traffic", icon: Activity },
               { id: "comics", label: "Comics Manager", icon: BookOpen },
               { id: "characters", label: "Characters Manager", icon: UserSquare2 },
               { id: "ultimate", label: "Ultimate Comic", icon: LayoutDashboard },
@@ -234,42 +257,36 @@ function AdminGate() {
       {/* MAIN LAYOUT DASHBOARD */}
       <main className="flex-1 p-10 overflow-y-auto">
         
-        {/* 🔥 TAB: NAYA LIVE TRAFFIC PANEL */}
         {activeTab === "traffic" && (
           <div className="space-y-4">
             <LiveTrafficPanel />
           </div>
         )}
 
-        {/* TAB: COMICS MANAGER */}
         {activeTab === "comics" && (
           <div className="space-y-4">
             <ComicsManager />
           </div>
         )}
 
-        {/* TAB: CHARACTERS MANAGER */}
         {activeTab === "characters" && (
           <div className="space-y-4">
             <CharactersManager />
           </div>
         )}
 
-        {/* TAB: ULTIMATE COMIC */}
         {activeTab === "ultimate" && (
           <div className="space-y-4">
             <ComicsManager />
           </div>
         )}
 
-        {/* TAB: NEW VIDEO LINKS MANAGER PANEL */}
         {activeTab === "videos" && (
           <div className="space-y-4">
             <VideoLinksManager />
           </div>
         )}
 
-        {/* TAB: ENGAGEMENT PANEL & LIKES ANALYTICS */}
         {activeTab === "engagement" && (
           <div className="space-y-4">
             <EngagementPanel />
