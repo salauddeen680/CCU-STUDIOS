@@ -4,10 +4,11 @@ import { useSearchParams } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { 
   Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
-  MessageSquare, LogOut, Video 
-} from "lucide-react"
+  MessageSquare, LogOut, Video, Activity 
+} from "lucide-react" // 🔥 Activity icon add kiya analytics ke liye
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
+import { getFirestore, collection, query, orderBy, getDocs } from "firebase/firestore" // 🔥 Firestore import kiya data fetch karne ke liye
 
 // 📥 Existing Core Components
 import { ComicsManager } from "@/components/admin/comics-manager"
@@ -28,7 +29,70 @@ const firebaseConfig = {
 
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 const auth = getAuth(app)
+const db = getFirestore(app) // 🔥 Database initialize kiya
+
 const ADMIN_ACCESS_KEY = "ccu-admin-2026"
+
+// 🔥 Naya Component: Live Traffic Panel (Firebase se views laane ke liye)
+function LiveTrafficPanel() {
+  const [views, setViews] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchViews = async () => {
+      try {
+        const q = query(collection(db, "pageViews"), orderBy("timestamp", "desc"))
+        const querySnapshot = await getDocs(q)
+        const viewsData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        setViews(viewsData)
+      } catch (error) {
+        console.error("Error fetching traffic:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchViews()
+  }, [])
+
+  if (loading) return <div className="flex gap-2 items-center text-red-500 font-bold"><Loader2 className="animate-spin h-5 w-5"/> Loading Live Traffic...</div>
+
+  return (
+    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 shadow-lg shadow-black">
+      <div className="flex items-center gap-3 mb-6 border-b border-zinc-800 pb-4">
+        <Activity className="h-6 w-6 text-green-500 animate-pulse" />
+        <div>
+          <h2 className="text-xl font-bold text-white">Live Visitor Traffic</h2>
+          <p className="text-xs text-zinc-400">Track all users and guests currently visiting the platform.</p>
+        </div>
+      </div>
+      
+      <div className="h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+        <div className="space-y-3">
+          {views.length === 0 ? (
+            <p className="text-zinc-500 text-sm">No traffic data recorded yet. Background tracker is active.</p>
+          ) : (
+            views.map((view) => (
+              <div key={view.id} className="p-4 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-2 transition-colors">
+                <div>
+                  <p className="text-sm font-mono text-green-400 break-all">{view.page}</p>
+                  <p className="text-xs text-zinc-500 mt-1 uppercase tracking-wider font-bold">
+                    User: {view.userType || "Guest"}
+                  </p>
+                </div>
+                <div className="text-xs text-zinc-400 sm:text-right shrink-0 bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800">
+                  {view.timestamp?.toDate ? view.timestamp.toDate().toLocaleString() : "Just now"}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function AdminGate() {
   const params = useSearchParams()
@@ -42,7 +106,7 @@ function AdminGate() {
   const [loginLoading, setLoginLoading] = useState(false)
 
   // 🎛️ Dashboard Navigation States
-  const [activeTab, setActiveTab] = useState("comics")
+  const [activeTab, setActiveTab] = useState("traffic") // 🔥 Default tab ko traffic kar diya taaki login karte hi views dikhein
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -128,10 +192,11 @@ function AdminGate() {
 
           <nav className="space-y-2">
             {[
+              { id: "traffic", label: "Live Traffic", icon: Activity }, // 🔥 Naya Traffic Tab
               { id: "comics", label: "Comics Manager", icon: BookOpen },
               { id: "characters", label: "Characters Manager", icon: UserSquare2 },
               { id: "ultimate", label: "Ultimate Comic", icon: LayoutDashboard },
-              { id: "videos", label: "Social Videos Manager", icon: Video }, // 📺 NEW TAB: Video links ke posters manage karne ke liye
+              { id: "videos", label: "Social Videos", icon: Video }, 
               { id: "engagement", label: "Engagement Panel", icon: MessageSquare }
             ].map((tab) => {
               const Icon = tab.icon
@@ -169,7 +234,14 @@ function AdminGate() {
       {/* MAIN LAYOUT DASHBOARD */}
       <main className="flex-1 p-10 overflow-y-auto">
         
-        {/* TAB: COMICS MANAGER (Iske andar edit option handle hoga) */}
+        {/* 🔥 TAB: NAYA LIVE TRAFFIC PANEL */}
+        {activeTab === "traffic" && (
+          <div className="space-y-4">
+            <LiveTrafficPanel />
+          </div>
+        )}
+
+        {/* TAB: COMICS MANAGER */}
         {activeTab === "comics" && (
           <div className="space-y-4">
             <ComicsManager />
@@ -190,7 +262,7 @@ function AdminGate() {
           </div>
         )}
 
-        {/* 📺 TAB: NEW VIDEO LINKS MANAGER PANEL */}
+        {/* TAB: NEW VIDEO LINKS MANAGER PANEL */}
         {activeTab === "videos" && (
           <div className="space-y-4">
             <VideoLinksManager />
