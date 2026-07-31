@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from "next"
 import { Inter, Oswald } from "next/font/google"
 import "./globals.css"
-import Script from "next/script" // 🔥 Next.js ka optimized script loader use karenge
+import Script from "next/script" // 🔥 Next.js ka optimized script loader
 import { Analytics } from "@vercel/analytics/react" // 🔥 Vercel Analytics Import Kiya
+import PageTracker from "@/components/PageTracker" // 🔥 Apna Naya Custom Tracker Import Kiya
 
 const inter = Inter({
   subsets: ["latin"],
@@ -72,8 +73,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script src="https://checkout.razorpay.com/v1/checkout.js" async />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
+        <PageTracker /> {/* 🔥 Firebase Tracker yahan laga diya */}
         {children}
-        <Analytics /> {/* 🔥 Vercel Analytics Component yahan laga diya */}
+        <Analytics /> {/* 🔥 Vercel Analytics Component */}
       </body>
     </html>
   )
