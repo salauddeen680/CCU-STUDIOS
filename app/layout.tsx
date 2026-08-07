@@ -29,6 +29,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/ccu-logo.png",
   },
+  manifest: "/manifest.json", // <--- 🔥 YAHAN APP BANANE WALI LINE ADD HO GAYI HAI
 }
 
 export const viewport: Viewport = {
