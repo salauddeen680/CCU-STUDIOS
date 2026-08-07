@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export', // Yeh add karna zaroori hai
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -7,6 +8,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    unoptimized: true, // Static export ke liye yeh zaroori hai
     remotePatterns: [
       { protocol: "https", hostname: "firebasestorage.googleapis.com" },
       { protocol: "https", hostname: "picsum.photos" },
@@ -15,4 +17,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+export default nextConfig;
