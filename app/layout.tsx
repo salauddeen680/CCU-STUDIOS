@@ -77,6 +77,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <PageTracker /> {/* 🔥 Firebase Tracker yahan laga diya */}
         {children}
         <Analytics /> {/* 🔥 Vercel Analytics Component */}
+        
+        {/* 🔥 PWABuilder Service Worker Fix: Yeh script app ko offline support degi */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )
