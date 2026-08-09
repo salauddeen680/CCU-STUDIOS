@@ -12,12 +12,20 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     const comic = await res.json()
 
     if (!comic || !comic.title) {
-      return { title: "Comic — CCU Studios" }
+      return { 
+        title: "Comic — CCU Studios",
+        alternates: {
+          canonical: `https://ccu-studios.vercel.app/comics/${id}`, // 🔥 ERROR FIX YAHAN HAI
+        }
+      }
     }
 
     return {
       title: `${comic.title} — CCU Studios`,
       description: `${comic.description || "Read premium manga-style comic chapters."} Created by Salauddin (Saif).`,
+      alternates: {
+        canonical: `https://ccu-studios.vercel.app/comics/${id}`, // 🔥 ERROR FIX YAHAN HAI
+      },
       openGraph: {
         title: `${comic.title} — CCU Studios`,
         description: comic.description,
@@ -30,6 +38,9 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
     return {
       title: "Comic — CCU Studios",
       description: "Read premium cosmic comics on CCU Studios.",
+      alternates: {
+        canonical: `https://ccu-studios.vercel.app/comics/${id}`, // 🔥 ERROR FIX YAHAN BHI HAI
+      }
     }
   }
 }
