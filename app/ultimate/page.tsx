@@ -5,6 +5,9 @@ import { UltimateList } from "@/components/ultimate-list"
 export const metadata: Metadata = {
   title: "Ultimate Comic — CCU Studios",
   description: "The flagship saga of the Cosmic Cinematic Universe.",
+  alternates: {
+    canonical: "https://ccu-studios.vercel.app/ultimate", // 🔥 YAHAN CANONICAL FIX ADD HO GAYA HAI
+  },
 }
 
 export default function UltimatePage() {
