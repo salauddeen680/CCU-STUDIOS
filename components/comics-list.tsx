@@ -20,12 +20,20 @@ export function ComicsList() {
 
   const currentList = activeTab === "published" ? publishedComics : upcomingComics
 
-  // 🔥 AUTO-GROUPING LOGIC (IC STUDIO STYLE)
-  // Yeh aapke title se main series ka naam nikal kar alag-alag section banayega
+  // 🔥 SMART GROUPING LOGIC (Series-wise grouping)
   const groupedComics = currentList.reduce((groups, comic) => {
-    // Title se main naam nikalna (colon, dash, 'issue' ya 'chapter' se pehle ka hissa)
-    let seriesName = comic.title.split(/[:\-]|issue|chapter/i)[0].trim().toUpperCase()
-    if (!seriesName) seriesName = "OTHER COMICS"
+    let titleUpper = comic.title.toUpperCase()
+    let seriesName = "OTHER COMICS"
+
+    if (titleUpper.includes("TRIVEXA")) {
+      seriesName = "TRIVEXA"
+    } else if (titleUpper.includes("ARYAN")) {
+      seriesName = "ARYAN: THE BEAST"
+    } else if (titleUpper.includes("ALLIANCE") || titleUpper.includes("CCU: THE ALLIANCE")) {
+      seriesName = "CCU: THE ALLIANCE"
+    } else {
+      seriesName = comic.title.split(/[:\-]|issue|chapter/i)[0].trim().toUpperCase()
+    }
 
     if (!groups[seriesName]) {
       groups[seriesName] = []
@@ -71,19 +79,20 @@ export function ComicsList() {
           </p>
         </div>
       ) : (
-        /* 🔵 CATEGORY WISE GRID (IC STUDIO STYLE) */
-        <div className="space-y-12 mt-6">
+        /* 🔵 HORIZONTAL SCROLLING ROWS (IC STUDIO STYLE) */
+        <div className="space-y-10 mt-6">
           {Object.entries(groupedComics).map(([seriesName, seriesComics]) => (
-            <div key={seriesName} className="space-y-4">
+            <div key={seriesName} className="space-y-3">
               
-              {/* Main Series Title (Jaise: TRIVEXA, ARYAN) */}
+              {/* Series Heading */}
               <h2 className="text-xl font-extrabold text-white tracking-wide border-l-4 border-red-600 pl-3">
                 {seriesName}
               </h2>
               
-              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+              {/* Horizontal Scroll Container (Side-by-side scrolling cards) */}
+              <div className="flex overflow-x-auto gap-4 pb-4 pt-1 no-scrollbar scroll-smooth">
                 {seriesComics.map((c, i) => (
-                  <div key={c.id} className="relative group">
+                  <div key={c.id} className="relative group min-w-[160px] sm:min-w-[200px] flex-shrink-0">
                     {/* Yellow Badge */}
                     <div className="absolute top-2 right-2 z-20 rounded bg-yellow-400 px-2 py-0.5 text-[10px] font-black uppercase text-black shadow-md">
                       {c.publishStatus === "upcoming" ? "UPCOMING" : "RELEASED"}
