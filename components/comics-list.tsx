@@ -65,12 +65,14 @@ export function ComicsList() {
         /* 🔵 Grid View */
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {currentList.map((c, i) => (
-            <div key={c.id} className="relative group">
-              {c.publishStatus === "upcoming" && (
-                <div className="absolute top-2 right-2 z-20 rounded bg-blue-600 px-2 py-0.5 text-[9px] font-black uppercase text-white shadow-md">
-                  Coming Soon
-                </div>
-              )}
+            <div key={c.id} className="relative group rounded-lg overflow-hidden">
+              
+              {/* 🔥 IC STUDIO STYLE YELLOW BADGES */}
+              <div className="absolute top-2 right-2 z-20 bg-yellow-400 text-black text-[10px] font-extrabold px-2 py-0.5 rounded shadow-md">
+                {c.publishStatus === "upcoming" ? "UPCOMING" : "RELEASED"}
+              </div>
+
+              {/* Asli Card Jo Aapka Logic aur Image Handle Karta Hai */}
               <VaultCard item={{ ...c, kind: "comic" }} index={i} />
             </div>
           ))}
