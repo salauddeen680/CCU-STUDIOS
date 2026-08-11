@@ -89,10 +89,10 @@ export function ComicsList() {
                 {seriesName}
               </h2>
               
-              {/* Horizontal Scroll Container (Side-by-side scrolling cards) */}
+              {/* Horizontal Scroll Container (Side-by-side compact cards) */}
               <div className="flex overflow-x-auto gap-4 pb-4 pt-1 no-scrollbar scroll-smooth">
                 {seriesComics.map((c, i) => (
-                  <div key={c.id} className="relative group min-w-[160px] sm:min-w-[200px] flex-shrink-0">
+                  <div key={c.id} className="relative group w-[150px] sm:w-[180px] flex-shrink-0">
                     {/* Yellow Badge */}
                     <div className="absolute top-2 right-2 z-20 rounded bg-yellow-400 px-2 py-0.5 text-[10px] font-black uppercase text-black shadow-md">
                       {c.publishStatus === "upcoming" ? "UPCOMING" : "RELEASED"}
