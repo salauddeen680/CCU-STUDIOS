@@ -2,69 +2,72 @@ import type { Metadata } from "next"
 import { SiteShell } from "@/components/site-shell"
 import { ComicDetail } from "@/components/comic-detail"
 
-// 🎯 STEP 1: Google Search ko Comic ka Asli Naam aur Detail dene ke liye Dynamic Metadata
+// 🎯 STEP 1: Dynamic Metadata with Clean Slug & Canonical Handling
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const id = params.id
+  const param = params.id
+  const baseUrl = "https://ccu-studios.vercel.app"
 
   try {
-    // Database se data automatic nikalne ke liye request (Next.js automatically handles fetch caching)
-    const res = await fetch(`https://ccu-studios.vercel.app/api/comics/${id}`)
+    const res = await fetch(`${baseUrl}/api/comics/${param}`, { next: { revalidate: 60 } })
     const comic = await res.json()
 
     if (!comic || !comic.title) {
       return { 
         title: "Comic — CCU Studios",
         alternates: {
-          canonical: `https://ccu-studios.vercel.app/comics/${id}`, // 🔥 ERROR FIX YAHAN HAI
+          canonical: `${baseUrl}/comics/${param}`,
         }
       }
     }
+
+    const canonicalPath = comic.slug ? comic.slug : param
 
     return {
       title: `${comic.title} — CCU Studios`,
       description: `${comic.description || "Read premium manga-style comic chapters."} Created by Salauddin (Saif).`,
       alternates: {
-        canonical: `https://ccu-studios.vercel.app/comics/${id}`, // 🔥 ERROR FIX YAHAN HAI
+        canonical: `${baseUrl}/comics/${canonicalPath}`,
       },
       openGraph: {
         title: `${comic.title} — CCU Studios`,
         description: comic.description,
-        images: [comic.coverImageUrl || "/ccu-logo.png"],
+        images: [comic.cover || comic.coverImageUrl || "/ccu-logo.png"],
         type: "article",
       },
     }
   } catch (error) {
-    // Agar koi galti se galat link khole toh build ya page crash na ho
     return {
       title: "Comic — CCU Studios",
       description: "Read premium cosmic comics on CCU Studios.",
       alternates: {
-        canonical: `https://ccu-studios.vercel.app/comics/${id}`, // 🔥 ERROR FIX YAHAN BHI HAI
+        canonical: `${baseUrl}/comics/${param}`,
       }
     }
   }
 }
 
 export default async function ComicDetailPage({ params }: { params: { id: string } }) {
-  const id = params.id
+  const param = params.id
+  const baseUrl = "https://ccu-studios.vercel.app"
   let comicData = null
 
-  // Google Bots ko Comic ka poster aur structural data dene ke liye JSON-LD fetch
   try {
-    const res = await fetch(`https://ccu-studios.vercel.app/api/comics/${id}`)
+    const res = await fetch(`${baseUrl}/api/comics/${param}`, { next: { revalidate: 60 } })
     comicData = await res.json()
   } catch (e) {
     console.error("Failed to fetch comic data for schema", e)
   }
 
-  // 🎭 STEP 2: Marvel jaisa Poster Carousel lane ke liye Invisible Schema Markup
+  const activeSlugOrId = comicData?.slug || param
+
+  // 🎭 STEP 2: Schema.org Book JSON-LD Structure
   const jsonLd = comicData && comicData.title ? {
     "@context": "https://schema.org",
     "@type": "Book",
     "name": comicData.title,
-    "image": comicData.coverImageUrl || "https://ccu-studios.vercel.app/ccu-logo.png",
+    "image": comicData.cover || comicData.coverImageUrl || `${baseUrl}/ccu-logo.png`,
     "description": comicData.description || "Premium cosmic comic book.",
-    "url": `https://ccu-studios.vercel.app/comics/${id}`,
+    "url": `${baseUrl}/comics/${activeSlugOrId}`,
     "author": {
       "@type": "Person",
       "name": "Salauddin (Saif)"
@@ -73,14 +76,13 @@ export default async function ComicDetailPage({ params }: { params: { id: string
 
   return (
     <SiteShell>
-      {/* Agar data mil gaya toh invisible script Google bots ke liye embed ho jayegi */}
       {jsonLd && (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <ComicDetail id={id} />
+      <ComicDetail id={param} />
     </SiteShell>
   )
 }
