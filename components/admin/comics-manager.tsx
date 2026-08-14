@@ -5,6 +5,16 @@ import { Plus, Trash2, Loader2, Upload, CheckCircle2, X, Edit2, Lock, BookOpen, 
 import { useComics, createComic, deleteComic, updateComic } from "@/lib/data";
 import { ImageUploader } from "./image-uploader";
 
+// 🛡️ Auto-Slug Utility Function
+const generateCleanSlug = (text: string) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
 export function ComicsManager() {
   const { comics = [], loading: dataLoading } = useComics();
   const [isOpen, setIsOpen] = useState(false);
@@ -55,7 +65,7 @@ export function ComicsManager() {
 
   // 🛡️ MAIN FIX 1: Ab ye purani aur nayi dono comics ko sahi se pehchanega
   const detectAccessType = (comic: any): "free" | "teaser_9" | "full_paid" => {
-    const isPremium = comic.isPaid === true || comic.paid === true; // Check both legacy & new
+    const isPremium = comic.isPaid === true || comic.paid === true;
     if (!isPremium) return "free";
     if (comic.freePages === 9) return "teaser_9";
     return "full_paid";
@@ -100,7 +110,7 @@ export function ComicsManager() {
     }
   };
 
-  // 💾 NEW COMIC API Handler
+  // 💾 NEW COMIC API Handler (Auto Slug Fix Injected)
   const handleSaveComic = async () => {
     if (!title.trim() || !description.trim()) {
       alert("Title aur Description dena zaroori hai bhai!");
@@ -109,15 +119,18 @@ export function ComicsManager() {
     setIsSaving(true);
     try {
       const { isPaid, freePages } = getAccessValues(accessType);
+      const generatedSlug = generateCleanSlug(title);
+
       await createComic({
         title,
+        slug: generatedSlug, // 👈 Clean Slug Injection
         description,
         timeline,
         cover: coverUrl || "",
         images: pageUrls,
         ultimate: timeline === "purani" || timeline === "dusri",
         isPaid: isPaid,
-        paid: isPaid, // 🛡️ Database dono fields update karega safety ke liye
+        paid: isPaid,
         freePages,
         publishStatus
       });
@@ -125,7 +138,7 @@ export function ComicsManager() {
       setUploadProgress(""); setAccessType("free"); setPublishStatus("published");
       setIsOpen(false);
       alert("Comic Setup Successfully! 🎉");
-      window.location.reload(); // 🛡️ MAIN FIX 2: Data turant refresh hoga save hone ke baad
+      window.location.reload();
     } catch (err) {
       console.error(err);
       alert("Database error.");
@@ -146,7 +159,7 @@ export function ComicsManager() {
     setEditPublishStatus(comic.publishStatus || "published"); 
   };
 
-  // 💾 Update API Handler
+  // 💾 Update API Handler (Auto Slug Update Injected)
   const handleUpdateComic = async () => {
     if (!editingComicId) return;
     if (!editTitle.trim() || !editDescription.trim()) {
@@ -157,21 +170,24 @@ export function ComicsManager() {
     setIsSaving(true);
     try {
       const { isPaid, freePages } = getAccessValues(editAccessType);
+      const updatedSlug = generateCleanSlug(editTitle);
+
       await updateComic(editingComicId, {
         title: editTitle,
+        slug: updatedSlug, // 👈 Clean Slug Injection
         description: editDescription,
         timeline: editTimeline,
         cover: editCoverUrl,
         images: editPageUrls,
         ultimate: editTimeline === "purani" || editTimeline === "dusri",
         isPaid: isPaid,
-        paid: isPaid, // 🛡️ Safety fallback
+        paid: isPaid,
         freePages,
         publishStatus: editPublishStatus
       });
       setEditingComicId(null);
       alert("Comic Updated Successfully! 🔄");
-      window.location.reload(); // 🛡️ MAIN FIX 2: Page reload hoga taaki purana cache data na dikhe
+      window.location.reload();
     } catch (err) {
       console.error(err);
       alert("Database update crash standard issue.");
@@ -296,7 +312,6 @@ export function ComicsManager() {
                     <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white" />
                     <textarea rows={3} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-white" />
                     
-                    {/* 🛡️ MAIN FIX 3: Timeline change karne ka option gayab tha editor mein, ab yahan daal diya hai */}
                     <div className="space-y-1">
                       <label className="text-[10px] font-semibold text-zinc-500 uppercase">Select Timeline</label>
                       <select value={editTimeline} onChange={(e) => setEditTimeline(e.target.value)} className="w-full bg-zinc-900 border border-zinc-800 rounded px-2 py-1.5 text-xs text-zinc-300">
