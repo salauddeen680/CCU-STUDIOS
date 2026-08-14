@@ -10,7 +10,7 @@ import {
 } from "lucide-react" 
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
-import { getFirestore, collection, query, orderBy, getDocs, limit, deleteDoc, doc } from "firebase/firestore" 
+import { getFirestore, collection, query, getDocs, deleteDoc, doc } from "firebase/firestore" 
 
 // 📥 Admin Managers
 import { ComicsManager } from "@/components/admin/comics-manager"
@@ -34,7 +34,7 @@ const db = getFirestore(app)
 
 const ADMIN_ACCESS_KEY = "ccu-admin-2026"
 
-// 🛡️ Filter blacklist for old and new admin entries
+// 🛡️ Filter blacklist for developer testing spam
 const BLOCKED_EMAILS = ["admin@ccustudios.com", "srk042221@gmail.com"]
 
 function AdvancedUniverseTraffic() {
@@ -43,23 +43,44 @@ function AdvancedUniverseTraffic() {
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [isClearing, setIsClearing] = useState(false)
 
+  // 🕒 All-Time Millisecond Helper for Reliable Sorting
+  const getEventEpoch = (item: any): number => {
+    try {
+      if (item.timestamp?.toDate) {
+        return item.timestamp.toDate().getTime()
+      }
+      if (item.createdAt) {
+        return new Date(item.createdAt).getTime()
+      }
+      if (item.timestamp?.seconds) {
+        return item.timestamp.seconds * 1000
+      }
+    } catch {
+      return 0
+    }
+    return 0
+  }
+
   const fetchTrafficData = async () => {
     setIsRefreshing(true)
     try {
-      const q = query(collection(db, "pageViews"), orderBy("timestamp", "desc"), limit(150))
-      const querySnapshot = await getDocs(q)
-      const rawData = querySnapshot.docs.map(d => ({
+      // Fetch all logs from Firestore without limiting or dropping due to index missing
+      const snapshot = await getDocs(collection(db, "pageViews"))
+      const rawData = snapshot.docs.map(d => ({
         id: d.id,
         ...d.data()
       }))
 
-      // Strict Filter: Remove any admin/developer emails and admin paths
+      // Filter developer self-visits
       const cleanVisitors = rawData.filter((item: any) => {
         const email = (item.userEmail || "").toLowerCase()
         const isBlockedEmail = BLOCKED_EMAILS.some(b => email.includes(b.toLowerCase()))
         const isAdminPath = item.page?.startsWith("/admin") || item.page?.startsWith("/api")
         return !isBlockedEmail && !isAdminPath
       })
+
+      // Sort chronological descending (Latest on top, all-time history preserved)
+      cleanVisitors.sort((a, b) => getEventEpoch(b) - getEventEpoch(a))
 
       setViews(cleanVisitors)
     } catch (error) {
@@ -78,10 +99,10 @@ function AdvancedUniverseTraffic() {
       const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, "pageViews", d.id)))
       await Promise.all(deletePromises)
       setViews([])
-      alert("Saara purana traffic data saaf ho gaya! Ab sirf real visitors aayenge. 🔥")
+      alert("Saara traffic log clean ho gaya!")
     } catch (err) {
       console.error("Clear error:", err)
-      alert("Data clear karne mein dikkat aayi.")
+      alert("Logs clean karte waqt issue aaya.")
     } finally {
       setIsClearing(false)
     }
@@ -91,30 +112,30 @@ function AdvancedUniverseTraffic() {
     fetchTrafficData()
   }, [])
 
-  // 🕒 Accurate Date & Time Formatter
+  // 🕒 Exact Date & Time Formatter (All Dates & Times Handled)
   const formatEventTimestamp = (v: any) => {
     try {
+      let dateObj: Date | null = null
       if (v.timestamp?.toDate) {
-        return v.timestamp.toDate().toLocaleString('en-IN', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        })
+        dateObj = v.timestamp.toDate()
+      } else if (v.createdAt) {
+        dateObj = new Date(v.createdAt)
+      } else if (v.timestamp?.seconds) {
+        dateObj = new Date(v.timestamp.seconds * 1000)
       }
-      if (v.createdAt) {
-        return new Date(v.createdAt).toLocaleString('en-IN', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true
-        })
+
+      if (!dateObj || isNaN(dateObj.getTime())) {
+        return "Live Activity"
       }
-      return "Live Just Now"
+
+      return dateObj.toLocaleString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      })
     } catch {
       return "Live Activity"
     }
@@ -124,7 +145,7 @@ function AdvancedUniverseTraffic() {
     return (
       <div className="flex h-96 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-        <p className="text-xs font-mono uppercase tracking-widest text-zinc-400">Loading Clean Audience Telemetry...</p>
+        <p className="text-xs font-mono uppercase tracking-widest text-zinc-400">Loading All-Time Audience Telemetry...</p>
       </div>
     )
   }
@@ -156,7 +177,7 @@ function AdvancedUniverseTraffic() {
               Universe Traffic Hub
             </h2>
           </div>
-          <p className="text-xs text-zinc-400 mt-1">Live audience analytics • Filtered from bot & creator sessions</p>
+          <p className="text-xs text-zinc-400 mt-1">All-time audience activity • Sorted real-time</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -185,13 +206,13 @@ function AdvancedUniverseTraffic() {
         
         <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase font-bold text-zinc-400">Total Audience Views</span>
+            <span className="text-xs uppercase font-bold text-zinc-400">Total All-Time Views</span>
             <Eye className="h-4 w-4 text-emerald-400" />
           </div>
           <div className="mt-4">
             <p className="text-3xl font-black text-white">{totalViews}</p>
             <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-900/40 mt-1 inline-block">
-              100% Real Readers
+              All Time Audience
             </span>
           </div>
         </div>
@@ -218,18 +239,18 @@ function AdvancedUniverseTraffic() {
             <p className="text-3xl font-black text-white">
               {mobileVisits} <span className="text-sm font-normal text-zinc-500">Mob | {desktopVisits} PC</span>
             </p>
-            <span className="text-[10px] text-zinc-400 mt-1 block">Screen Breakdown</span>
+            <span className="text-[10px] text-zinc-400 mt-1 block">Device Breakdown</span>
           </div>
         </div>
 
         <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase font-bold text-zinc-400">Anti-Spam Filter</span>
+            <span className="text-xs uppercase font-bold text-zinc-400">Pipeline Status</span>
             <ShieldCheck className="h-4 w-4 text-red-500" />
           </div>
           <div className="mt-4">
-            <p className="text-xl font-black text-emerald-400">SECURE & SHIELDED</p>
-            <span className="text-[10px] text-zinc-500 mt-1 block">Self Sessions Filtered Out</span>
+            <p className="text-xl font-black text-emerald-400">LIVE & SYNCED</p>
+            <span className="text-[10px] text-zinc-500 mt-1 block">Full History Tracked</span>
           </div>
         </div>
 
@@ -242,7 +263,7 @@ function AdvancedUniverseTraffic() {
         </h3>
         
         {topPages.length === 0 ? (
-          <p className="text-xs text-zinc-600 py-4 text-center">No audience traffic patterns logged yet.</p>
+          <p className="text-xs text-zinc-600 py-4 text-center">No traffic recorded yet.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {topPages.map(([path, count], idx) => (
@@ -260,20 +281,20 @@ function AdvancedUniverseTraffic() {
         )}
       </div>
 
-      {/* 📡 Live Visitor Stream Feed with Exact Time & Details */}
+      {/* 📡 Live Visitor Stream Feed with All-Time Exact Timestamps */}
       <div className="bg-zinc-900/30 border border-zinc-800 p-5 rounded-2xl">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Activity Stream & Timestamps
+            <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Activity Stream & Exact Timestamps
           </h3>
-          <span className="text-[10px] font-mono text-zinc-500">Public Sessions Feed</span>
+          <span className="text-[10px] font-mono text-zinc-500">All Historical & Real-Time Events</span>
         </div>
 
-        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+        <div className="space-y-3 max-h-[520px] overflow-y-auto pr-1">
           {views.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-sm font-semibold text-zinc-400">Ready for Live Traffic 🚀</p>
-              <p className="text-xs text-zinc-600 mt-1">Real visitors browsing comics or characters will show up here with live timestamps.</p>
+              <p className="text-xs text-zinc-600 mt-1">Visitors browsing comics or characters will show up here with exact recorded date and time.</p>
             </div>
           ) : (
             views.map((v) => {
