@@ -12,16 +12,14 @@ import {
   Smartphone, 
   Monitor, 
   Clock, 
-  Activity,
-  TrendingUp,
-  ShieldCheck,
-  Calendar
+  Activity, 
+  TrendingUp, 
+  ShieldCheck 
 } from "lucide-react"
 import { useComics, useCharacters, useAllComments, deleteComment } from "@/lib/data"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, orderBy, limit } from "firebase/firestore"
+import { collection, onSnapshot } from "firebase/firestore"
 
-// 🛡️ Block creator from logs
 const BLOCKED_EMAILS = ["admin@ccustudios.com", "srk042221@gmail.com"]
 
 export function EngagementPanel() {
@@ -33,53 +31,63 @@ export function EngagementPanel() {
   const [trafficLoading, setTrafficLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  // ⚡ Live Real-time Firestore Listener (No Refresh Needed)
   useEffect(() => {
-    async function fetchTraffic() {
-      try {
-        const q = query(collection(db, "pageViews"), orderBy("timestamp", "desc"), limit(150))
-        const snapshot = await getDocs(q)
-        const docs = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
+    const unsubscribe = onSnapshot(collection(db, "pageViews"), (snapshot) => {
+      const docs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
 
-        // Clean out admin/dev entries
-        const cleanVisitors = docs.filter((item: any) => {
-          const email = (item.userEmail || "").toLowerCase()
-          const isBlocked = BLOCKED_EMAILS.some(b => email.includes(b.toLowerCase()))
-          const isAdminRoute = item.page?.startsWith("/admin") || item.page?.startsWith("/api")
-          return !isBlocked && !isAdminRoute
-        })
+      // Clean filter
+      const cleanVisitors = docs.filter((item: any) => {
+        const email = (item.userEmail || "").toLowerCase()
+        const isBlocked = BLOCKED_EMAILS.some((b) => email.includes(b.toLowerCase()))
+        const isAdminRoute = item.page?.startsWith("/admin") || item.page?.startsWith("/api")
+        return !isBlocked && !isAdminRoute
+      })
 
-        setTrafficEvents(cleanVisitors)
-      } catch (err) {
-        console.error("Traffic Fetch Error:", err)
-      } finally {
-        setTrafficLoading(false)
-      }
-    }
+      // Sort by newest first
+      cleanVisitors.sort((a: any, b: any) => {
+        const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0)
+        const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0)
+        return timeB - timeA
+      })
 
-    fetchTraffic()
+      setTrafficEvents(cleanVisitors)
+      setTrafficLoading(false)
+    }, (error) => {
+      console.error("Live traffic listener error:", error)
+      setTrafficLoading(false)
+    })
+
+    return () => unsubscribe()
   }, [])
 
-  // Date Formatter Helper
+  // Exact Time Formatter
   const formatEventTime = (item: any) => {
     try {
-      if (item.timestamp?.toDate) {
-        return item.timestamp.toDate().toLocaleString('en-IN', {
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        })
-      }
+      let dateObj: Date | null = null
       if (item.createdAt) {
-        return new Date(item.createdAt).toLocaleString('en-IN', {
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        })
+        dateObj = new Date(item.createdAt)
+      } else if (item.timestamp?.toDate) {
+        dateObj = item.timestamp.toDate()
+      } else if (item.timestamp?.seconds) {
+        dateObj = new Date(item.timestamp.seconds * 1000)
       }
-      return "Recent Activity"
+
+      if (!dateObj || isNaN(dateObj.getTime())) return "Live Now"
+
+      return dateObj.toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      })
     } catch {
-      return "Recent"
+      return "Live Now"
     }
   }
 
@@ -116,7 +124,7 @@ export function EngagementPanel() {
       {/* Top Header */}
       <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
         <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-          <Activity className="h-4 w-4 text-emerald-400 animate-pulse" /> Real-Time Engagement & Traffic
+          <Activity className="h-4 w-4 text-emerald-400 animate-pulse" /> Real-Time Engagement & Live Traffic
         </h2>
         <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded flex items-center gap-1">
           <ShieldCheck className="h-3.5 w-3.5" /> Self-Spam Filter Active
@@ -131,7 +139,7 @@ export function EngagementPanel() {
             <Eye className="h-4 w-4 text-emerald-400" />
           </div>
           <p className="font-display text-2xl font-bold text-white mt-2">{totalRealViews}</p>
-          <span className="text-[10px] text-zinc-500">Real Readers</span>
+          <span className="text-[10px] text-zinc-500">All-Time Visitors</span>
         </div>
 
         <div className="rounded-xl p-4 border border-zinc-800 bg-zinc-900/40">
@@ -183,17 +191,19 @@ export function EngagementPanel() {
         )}
       </div>
 
-      {/* Detailed Live Visitor Feed with Timestamp */}
+      {/* Live Visitor Feed */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-5">
         <div className="mb-4 flex items-center justify-between border-b border-zinc-800 pb-3">
           <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Activity & Timestamps
+            <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Stream (Auto-Updating)
           </h3>
-          <span className="text-[11px] text-zinc-500 font-mono">Who & When</span>
+          <span className="text-[11px] text-emerald-400 font-mono flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" /> Live Socket
+          </span>
         </div>
 
         {trafficLoading ? (
-          <p className="py-6 text-center text-xs text-zinc-500">Loading activity feed...</p>
+          <p className="py-6 text-center text-xs text-zinc-500">Connecting live stream...</p>
         ) : trafficEvents.length === 0 ? (
           <p className="py-8 text-center text-xs text-zinc-600">No audience visits logged yet.</p>
         ) : (
@@ -237,7 +247,7 @@ export function EngagementPanel() {
         )}
       </div>
 
-      {/* Audience Comments */}
+      {/* Comments Moderation */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-5">
         <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2 mb-4 border-b border-zinc-800 pb-3">
           <MessageSquare className="h-4 w-4 text-red-500" /> Audience Comments ({comments.length})
