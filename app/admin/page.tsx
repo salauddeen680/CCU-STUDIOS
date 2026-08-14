@@ -6,11 +6,11 @@ import {
   Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
   MessageSquare, LogOut, Video, Activity, Eye, Globe, 
   Smartphone, Monitor, ShieldCheck, TrendingUp, RefreshCw,
-  Clock, Flame, Users
+  Clock, Users, Trash2
 } from "lucide-react" 
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
-import { getFirestore, collection, query, orderBy, getDocs, limit } from "firebase/firestore" 
+import { getFirestore, collection, query, orderBy, getDocs, limit, deleteDoc, doc } from "firebase/firestore" 
 
 // 📥 Admin Managers
 import { ComicsManager } from "@/components/admin/comics-manager"
@@ -34,29 +34,32 @@ const db = getFirestore(app)
 
 const ADMIN_ACCESS_KEY = "ccu-admin-2026"
 
-// 👑 100% ADVANCED UNIVERSAL TRAFFIC ENGINE (Full Detail View)
+// 🛡️ Filter blacklist for old and new admin entries
+const BLOCKED_EMAILS = ["admin@ccustudios.com", "srk042221@gmail.com"]
+
 function AdvancedUniverseTraffic() {
   const [views, setViews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isClearing, setIsClearing] = useState(false)
 
   const fetchTrafficData = async () => {
     setIsRefreshing(true)
     try {
       const q = query(collection(db, "pageViews"), orderBy("timestamp", "desc"), limit(150))
       const querySnapshot = await getDocs(q)
-      const rawData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      const rawData = querySnapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
       }))
 
-      // 🛡️ Filter Out Admin / Internal Spam
-      const cleanVisitors = rawData.filter(
-        (item: any) =>
-          !item.page?.startsWith("/admin") &&
-          !item.page?.startsWith("/api") &&
-          !item.userEmail?.toLowerCase().includes("admin@ccustudios.com")
-      )
+      // Strict Filter: Remove any admin/developer emails and admin paths
+      const cleanVisitors = rawData.filter((item: any) => {
+        const email = (item.userEmail || "").toLowerCase()
+        const isBlockedEmail = BLOCKED_EMAILS.some(b => email.includes(b.toLowerCase()))
+        const isAdminPath = item.page?.startsWith("/admin") || item.page?.startsWith("/api")
+        return !isBlockedEmail && !isAdminPath
+      })
 
       setViews(cleanVisitors)
     } catch (error) {
@@ -64,6 +67,23 @@ function AdvancedUniverseTraffic() {
     } finally {
       setLoading(false)
       setIsRefreshing(false)
+    }
+  }
+
+  const handleClearLegacyLogs = async () => {
+    if (!confirm("Kya aap saara purana test traffic data delete karke fresh start karna chahte hain?")) return
+    setIsClearing(true)
+    try {
+      const snapshot = await getDocs(collection(db, "pageViews"))
+      const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, "pageViews", d.id)))
+      await Promise.all(deletePromises)
+      setViews([])
+      alert("Saara purana traffic data saaf ho gaya! Ab sirf real visitors aayenge. 🔥")
+    } catch (err) {
+      console.error("Clear error:", err)
+      alert("Data clear karne mein dikkat aayi.")
+    } finally {
+      setIsClearing(false)
     }
   }
 
@@ -75,17 +95,17 @@ function AdvancedUniverseTraffic() {
     return (
       <div className="flex h-96 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin text-red-600" />
-        <p className="text-xs font-mono uppercase tracking-widest text-zinc-400">Booting Real-Time Universe Telemetry...</p>
+        <p className="text-xs font-mono uppercase tracking-widest text-zinc-400">Loading Clean Audience Telemetry...</p>
       </div>
     )
   }
 
-  // 📊 Metric Calculations
+  // 📊 Metrics Calculation
   const totalViews = views.length
   const loggedInVisits = views.filter(v => v.isLoggedIn || (v.userEmail && !v.userEmail.includes("Guest"))).length
   const guestVisits = totalViews - loggedInVisits
-  const mobileVisits = views.filter(v => v.device === "Mobile").length
-  const desktopVisits = views.filter(v => v.device === "Desktop" || !v.device).length
+  const mobileVisits = views.filter(v => v.device?.includes("Mobile") || v.device?.includes("iPhone") || v.device?.includes("Android")).length
+  const desktopVisits = totalViews - mobileVisits
 
   // Top Pages
   const pageMap: Record<string, number> = {}
@@ -98,32 +118,42 @@ function AdvancedUniverseTraffic() {
   return (
     <div className="space-y-6">
       
-      {/* 🚀 Top Header & Refresh Bar */}
+      {/* 🚀 Header Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800">
         <div>
           <div className="flex items-center gap-2">
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <h2 className="text-lg font-black tracking-wider uppercase text-white flex items-center gap-2">
+            <h2 className="text-lg font-black tracking-wider uppercase text-white">
               Universe Traffic Hub
             </h2>
           </div>
-          <p className="text-xs text-zinc-400 mt-1">Live audience analytics • Filtered from bot & admin traffic</p>
+          <p className="text-xs text-zinc-400 mt-1">Live audience analytics • Filtered from bot & creator sessions</p>
         </div>
 
-        <button 
-          onClick={fetchTrafficData}
-          disabled={isRefreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-950 border border-zinc-800 hover:border-red-600/50 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-all self-start sm:self-auto"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-red-500" : ""}`} />
-          {isRefreshing ? "Syncing Feed..." : "Live Refresh"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={fetchTrafficData}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-3.5 py-2 bg-zinc-950 border border-zinc-800 hover:border-zinc-700 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-all"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-red-500" : ""}`} />
+            {isRefreshing ? "Syncing..." : "Live Refresh"}
+          </button>
+          
+          <button 
+            onClick={handleClearLegacyLogs}
+            disabled={isClearing}
+            className="flex items-center gap-2 px-3.5 py-2 bg-red-950/40 border border-red-900/60 hover:bg-red-900/60 rounded-xl text-xs font-bold text-red-400 hover:text-white transition-all"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {isClearing ? "Cleaning..." : "Purge Logs"}
+          </button>
+        </div>
       </div>
 
-      {/* 📊 High-Level Metrics Grid */}
+      {/* 📊 Metrics Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         
-        {/* Total Clean Views */}
         <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase font-bold text-zinc-400">Total Audience Views</span>
@@ -132,12 +162,11 @@ function AdvancedUniverseTraffic() {
           <div className="mt-4">
             <p className="text-3xl font-black text-white">{totalViews}</p>
             <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-900/40 mt-1 inline-block">
-              100% Real Visitors
+              100% Real Readers
             </span>
           </div>
         </div>
 
-        {/* Member vs Guest Split */}
         <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase font-bold text-zinc-400">Reader Type</span>
@@ -151,7 +180,6 @@ function AdvancedUniverseTraffic() {
           </div>
         </div>
 
-        {/* Device Distribution */}
         <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs uppercase font-bold text-zinc-400">Device Platform</span>
@@ -161,32 +189,31 @@ function AdvancedUniverseTraffic() {
             <p className="text-3xl font-black text-white">
               {mobileVisits} <span className="text-sm font-normal text-zinc-500">Mob | {desktopVisits} PC</span>
             </p>
-            <span className="text-[10px] text-zinc-400 mt-1 block">Screen Optimization</span>
+            <span className="text-[10px] text-zinc-400 mt-1 block">Screen Breakdown</span>
           </div>
         </div>
 
-        {/* Security / System Pipeline */}
         <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
           <div className="flex items-center justify-between">
-            <span className="text-xs uppercase font-bold text-zinc-400">Pipeline Status</span>
+            <span className="text-xs uppercase font-bold text-zinc-400">Anti-Spam Filter</span>
             <ShieldCheck className="h-4 w-4 text-red-500" />
           </div>
           <div className="mt-4">
-            <p className="text-xl font-black text-emerald-400">SECURE & ACTIVE</p>
-            <span className="text-[10px] text-zinc-500 mt-1 block">Zero Admin Duplication</span>
+            <p className="text-xl font-black text-emerald-400">SECURE & SHIELDED</p>
+            <span className="text-[10px] text-zinc-500 mt-1 block">Self Sessions Filtered Out</span>
           </div>
         </div>
 
       </div>
 
-      {/* 📈 Most Read Chapters & Top Visited Sections */}
+      {/* 📈 Most Read Chapters */}
       <div className="bg-zinc-900/30 border border-zinc-800 p-5 rounded-2xl">
         <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2 mb-4">
           <TrendingUp className="h-4 w-4 text-red-500" /> Most Visited Comics & Lore Paths
         </h3>
         
         {topPages.length === 0 ? (
-          <p className="text-xs text-zinc-600 py-4 text-center">No traffic patterns logged yet.</p>
+          <p className="text-xs text-zinc-600 py-4 text-center">No audience traffic patterns logged yet.</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {topPages.map(([path, count], idx) => (
@@ -204,18 +231,21 @@ function AdvancedUniverseTraffic() {
         )}
       </div>
 
-      {/* 📡 Granular Real-Time Action Feed */}
+      {/* 📡 Live Visitor Stream Feed */}
       <div className="bg-zinc-900/30 border border-zinc-800 p-5 rounded-2xl">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
             <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Stream Feed
           </h3>
-          <span className="text-[10px] font-mono text-zinc-500">Last 150 Events</span>
+          <span className="text-[10px] font-mono text-zinc-500">Filtered Public Readers</span>
         </div>
 
         <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
           {views.length === 0 ? (
-            <p className="text-xs text-zinc-600 py-10 text-center">No audience visits logged yet.</p>
+            <div className="py-12 text-center">
+              <p className="text-sm font-semibold text-zinc-400">Ready for Live Traffic 🚀</p>
+              <p className="text-xs text-zinc-600 mt-1">Real visitors browsing comics or characters will show up here in real time.</p>
+            </div>
           ) : (
             views.map((v) => {
               const isGuest = !v.userEmail || v.userEmail.includes("Guest");
@@ -237,7 +267,11 @@ function AdvancedUniverseTraffic() {
                       <span className="flex items-center gap-1"><Globe className="h-3 w-3 text-zinc-500" /> {v.location || "Global Web"}</span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
-                        {v.device === "Mobile" ? <Smartphone className="h-3 w-3 text-zinc-500" /> : <Monitor className="h-3 w-3 text-zinc-500" />}
+                        {v.device?.includes("Mobile") || v.device?.includes("iPhone") || v.device?.includes("Android") ? (
+                          <Smartphone className="h-3 w-3 text-purple-400" />
+                        ) : (
+                          <Monitor className="h-3 w-3 text-blue-400" />
+                        )}
                         {v.device || "Desktop"} ({v.browser || "Web"})
                       </span>
                       <span>•</span>
