@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { getApps, getApp, initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -19,90 +19,67 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// 🛡️ Owner / Admin Emails list jo tracking mein 100% IGNORE hongi
-const IGNORED_ADMIN_EMAILS = [
-  "admin@ccustudios.com",
-  "srk042221@gmail.com"
-];
-
 export default function PageTracker() {
   const pathname = usePathname();
-  const tracked = useRef("");
+  const lastPath = useRef("");
 
   useEffect(() => {
     if (!pathname) return;
 
-    // 🛑 1. Admin/API Routes Ignore
+    // Admin routes ko track nahi karna
     if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
       return;
     }
 
-    if (tracked.current === pathname) return;
+    // Same route pe duplicate entry rokna
+    if (lastPath.current === pathname) return;
+    lastPath.current = pathname;
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      const email = user?.email?.toLowerCase() || "";
-
-      // 🛑 2. Creator / Admin ki apni visit kabhi record nahi hogi
-      if (IGNORED_ADMIN_EMAILS.some((adminEmail) => email.includes(adminEmail.toLowerCase()))) {
-        return;
-      }
-
-      tracked.current = pathname;
-      const userDisplay = user ? (user.email || user.displayName || "Member") : "Guest / Visitor";
-
-      // 📱 Accurate Device Detection
-      const userAgent = typeof window !== "undefined" ? navigator.userAgent : "";
-      let device = "Desktop";
-      if (/Android/i.test(userAgent)) device = "Android Mobile";
-      else if (/iPhone/i.test(userAgent)) device = "iPhone";
-      else if (/iPad/i.test(userAgent)) device = "iPad Tablet";
-
-      // 🌐 Accurate Browser Detection
-      let browser = "Chrome";
-      if (userAgent.includes("Firefox")) browser = "Firefox";
-      else if (userAgent.includes("Edg/")) browser = "Edge";
-      else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) browser = "Safari";
-      else if (userAgent.includes("OPR") || userAgent.includes("Opera")) browser = "Opera";
-
-      // 🌍 100% Working Location API (City, Region, Country)
-      let location = "India (Web)";
+    const trackVisit = async () => {
       try {
-        const res = await fetch("https://api.country.is/");
-        if (res.ok) {
-          const data = await res.json();
-          location = data.country ? `Country: ${data.country}` : "Global Web";
+        const user = auth.currentUser;
+        const userEmail = user?.email || "Guest Reader";
+
+        // Accurate Native Device Detection (No Network API Dependency)
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+        let device = "Desktop PC";
+        if (/Android/i.test(ua)) device = "Android Mobile";
+        else if (/iPhone/i.test(ua)) device = "iPhone";
+        else if (/iPad/i.test(ua)) device = "iPad Tablet";
+
+        // Browser Detection
+        let browser = "Browser";
+        if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome";
+        else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+        else if (ua.includes("Firefox")) browser = "Firefox";
+        else if (ua.includes("Edg")) browser = "Edge";
+
+        // Native Timezone/Region (100% Reliable & Fast)
+        let region = "Global";
+        try {
+          region = Intl.DateTimeFormat().resolvedOptions().timeZone || "Global";
+        } catch {
+          region = "Global";
         }
-      } catch {
-        location = "Global Web";
-      }
 
-      // Referrer source
-      let source = "Direct Visit";
-      if (typeof document !== "undefined" && document.referrer) {
-        if (document.referrer.includes("google")) source = "Google Search";
-        else if (document.referrer.includes("instagram")) source = "Instagram";
-        else if (document.referrer.includes("youtube")) source = "YouTube";
-        else source = "External Link";
-      }
-
-      try {
+        // Direct Firestore Push
         await addDoc(collection(db, "pageViews"), {
           page: pathname,
-          timestamp: serverTimestamp(),
-          userEmail: userDisplay,
+          userEmail: userEmail,
           isLoggedIn: !!user,
-          device,
-          browser,
-          location,
-          referrer: source,
-          createdAt: new Date().toISOString(),
+          device: device,
+          browser: browser,
+          location: region,
+          referrer: typeof document !== "undefined" && document.referrer ? "Web Referrer" : "Direct Visit",
+          timestamp: serverTimestamp(),
+          createdAt: new Date().toISOString()
         });
-      } catch (error) {
-        console.error("Tracking Error:", error);
+      } catch (err) {
+        console.error("Tracker save failed:", err);
       }
-    });
+    };
 
-    return () => unsubscribe();
+    trackVisit();
   }, [pathname]);
 
   return null;
