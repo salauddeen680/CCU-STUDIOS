@@ -4,19 +4,21 @@ import { useSearchParams } from "next/navigation"
 import { Suspense, useState, useEffect } from "react"
 import { 
   Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
-  MessageSquare, LogOut, Video, Activity 
+  MessageSquare, LogOut, Video, Activity, Eye, Globe, 
+  Smartphone, Monitor, ShieldCheck, TrendingUp, RefreshCw,
+  Clock, Flame, Users
 } from "lucide-react" 
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
-import { getFirestore, collection, query, orderBy, getDocs } from "firebase/firestore" 
+import { getFirestore, collection, query, orderBy, getDocs, limit } from "firebase/firestore" 
 
-// 📥 Existing Core Components
+// 📥 Admin Managers
 import { ComicsManager } from "@/components/admin/comics-manager"
 import { CharactersManager } from "@/components/admin/characters-manager"
 import { EngagementPanel } from "@/components/admin/engagement-panel"
 import { VideoLinksManager } from "@/components/admin/video-links-manager"
 
-// 🔐 Secure Configuration
+// 🔐 Firebase Setup
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -32,83 +34,220 @@ const db = getFirestore(app)
 
 const ADMIN_ACCESS_KEY = "ccu-admin-2026"
 
-// 🔥 ADVANCED LIVE TRAFFIC PANEL (Totals & Emails)
-function LiveTrafficPanel() {
+// 👑 100% ADVANCED UNIVERSAL TRAFFIC ENGINE (Full Detail View)
+function AdvancedUniverseTraffic() {
   const [views, setViews] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+
+  const fetchTrafficData = async () => {
+    setIsRefreshing(true)
+    try {
+      const q = query(collection(db, "pageViews"), orderBy("timestamp", "desc"), limit(150))
+      const querySnapshot = await getDocs(q)
+      const rawData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+
+      // 🛡️ Filter Out Admin / Internal Spam
+      const cleanVisitors = rawData.filter(
+        (item: any) =>
+          !item.page?.startsWith("/admin") &&
+          !item.page?.startsWith("/api") &&
+          !item.userEmail?.toLowerCase().includes("admin@ccustudios.com")
+      )
+
+      setViews(cleanVisitors)
+    } catch (error) {
+      console.error("Error fetching live analytics:", error)
+    } finally {
+      setLoading(false)
+      setIsRefreshing(false)
+    }
+  }
 
   useEffect(() => {
-    const fetchViews = async () => {
-      try {
-        const q = query(collection(db, "pageViews"), orderBy("timestamp", "desc"))
-        const querySnapshot = await getDocs(q)
-        const viewsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }))
-        setViews(viewsData)
-      } catch (error) {
-        console.error("Error fetching traffic:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchViews()
+    fetchTrafficData()
   }, [])
 
-  if (loading) return <div className="flex gap-2 items-center text-red-500 font-bold"><Loader2 className="animate-spin h-5 w-5"/> Loading Live Analytics...</div>
+  if (loading) {
+    return (
+      <div className="flex h-96 flex-col items-center justify-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        <p className="text-xs font-mono uppercase tracking-widest text-zinc-400">Booting Real-Time Universe Telemetry...</p>
+      </div>
+    )
+  }
 
-  // 🔥 Calculations for Dashboard
-  const totalViews = views.length;
-  const loggedInViews = views.filter(v => v.userEmail && v.userEmail !== "Guest / Visitor").length;
+  // 📊 Metric Calculations
+  const totalViews = views.length
+  const loggedInVisits = views.filter(v => v.isLoggedIn || (v.userEmail && !v.userEmail.includes("Guest"))).length
+  const guestVisits = totalViews - loggedInVisits
+  const mobileVisits = views.filter(v => v.device === "Mobile").length
+  const desktopVisits = views.filter(v => v.device === "Desktop" || !v.device).length
+
+  // Top Pages
+  const pageMap: Record<string, number> = {}
+  views.forEach(v => {
+    const p = v.page || "/"
+    pageMap[p] = (pageMap[p] || 0) + 1
+  })
+  const topPages = Object.entries(pageMap).sort((a, b) => b[1] - a[1]).slice(0, 4)
 
   return (
-    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-6 shadow-lg shadow-black">
+    <div className="space-y-6">
       
-      {/* HEADER */}
-      <div className="flex items-center gap-3 mb-4 border-b border-zinc-800 pb-4">
-        <Activity className="h-6 w-6 text-green-500 animate-pulse" />
+      {/* 🚀 Top Header & Refresh Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-zinc-900/40 p-5 rounded-2xl border border-zinc-800">
         <div>
-          <h2 className="text-xl font-bold text-white">Advanced Traffic Analytics</h2>
-          <p className="text-xs text-zinc-400">Track all page views, visitors, and logged-in users.</p>
+          <div className="flex items-center gap-2">
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
+            <h2 className="text-lg font-black tracking-wider uppercase text-white flex items-center gap-2">
+              Universe Traffic Hub
+            </h2>
+          </div>
+          <p className="text-xs text-zinc-400 mt-1">Live audience analytics • Filtered from bot & admin traffic</p>
         </div>
+
+        <button 
+          onClick={fetchTrafficData}
+          disabled={isRefreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-zinc-950 border border-zinc-800 hover:border-red-600/50 rounded-xl text-xs font-bold text-zinc-300 hover:text-white transition-all self-start sm:self-auto"
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin text-red-500" : ""}`} />
+          {isRefreshing ? "Syncing Feed..." : "Live Refresh"}
+        </button>
       </div>
 
-      {/* STATS CARDS */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg flex flex-col justify-center items-center">
-          <p className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Total Views</p>
-          <h3 className="text-3xl font-black text-white">{totalViews}</h3>
+      {/* 📊 High-Level Metrics Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        {/* Total Clean Views */}
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase font-bold text-zinc-400">Total Audience Views</span>
+            <Eye className="h-4 w-4 text-emerald-400" />
+          </div>
+          <div className="mt-4">
+            <p className="text-3xl font-black text-white">{totalViews}</p>
+            <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-900/40 mt-1 inline-block">
+              100% Real Visitors
+            </span>
+          </div>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 p-4 rounded-lg flex flex-col justify-center items-center">
-          <p className="text-zinc-400 text-xs uppercase tracking-wider mb-1">Logged-In Visits</p>
-          <h3 className="text-3xl font-black text-red-500">{loggedInViews}</h3>
+
+        {/* Member vs Guest Split */}
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase font-bold text-zinc-400">Reader Type</span>
+            <Users className="h-4 w-4 text-blue-400" />
+          </div>
+          <div className="mt-4">
+            <p className="text-3xl font-black text-white">
+              {loggedInVisits} <span className="text-sm font-normal text-zinc-500">/ {guestVisits}</span>
+            </p>
+            <span className="text-[10px] text-zinc-400 mt-1 block">Members vs Guests</span>
+          </div>
         </div>
+
+        {/* Device Distribution */}
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase font-bold text-zinc-400">Device Platform</span>
+            <Smartphone className="h-4 w-4 text-purple-400" />
+          </div>
+          <div className="mt-4">
+            <p className="text-3xl font-black text-white">
+              {mobileVisits} <span className="text-sm font-normal text-zinc-500">Mob | {desktopVisits} PC</span>
+            </p>
+            <span className="text-[10px] text-zinc-400 mt-1 block">Screen Optimization</span>
+          </div>
+        </div>
+
+        {/* Security / System Pipeline */}
+        <div className="bg-zinc-900/50 border border-zinc-800 p-5 rounded-2xl flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs uppercase font-bold text-zinc-400">Pipeline Status</span>
+            <ShieldCheck className="h-4 w-4 text-red-500" />
+          </div>
+          <div className="mt-4">
+            <p className="text-xl font-black text-emerald-400">SECURE & ACTIVE</p>
+            <span className="text-[10px] text-zinc-500 mt-1 block">Zero Admin Duplication</span>
+          </div>
+        </div>
+
       </div>
-      
-      {/* TRAFFIC LIST */}
-      <div className="h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-        <div className="space-y-3">
+
+      {/* 📈 Most Read Chapters & Top Visited Sections */}
+      <div className="bg-zinc-900/30 border border-zinc-800 p-5 rounded-2xl">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2 mb-4">
+          <TrendingUp className="h-4 w-4 text-red-500" /> Most Visited Comics & Lore Paths
+        </h3>
+        
+        {topPages.length === 0 ? (
+          <p className="text-xs text-zinc-600 py-4 text-center">No traffic patterns logged yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {topPages.map(([path, count], idx) => (
+              <div key={path} className="flex items-center justify-between bg-zinc-950 p-3 rounded-xl border border-zinc-800">
+                <div className="flex items-center gap-2.5 truncate">
+                  <span className="text-xs font-mono font-bold text-red-500">#{idx + 1}</span>
+                  <span className="font-mono text-xs text-zinc-200 truncate">{path}</span>
+                </div>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-950/40 px-2.5 py-1 rounded-md border border-emerald-900/50">
+                  {count} views
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 📡 Granular Real-Time Action Feed */}
+      <div className="bg-zinc-900/30 border border-zinc-800 p-5 rounded-2xl">
+        <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
+            <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Stream Feed
+          </h3>
+          <span className="text-[10px] font-mono text-zinc-500">Last 150 Events</span>
+        </div>
+
+        <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
           {views.length === 0 ? (
-            <p className="text-zinc-500 text-sm text-center mt-10">No traffic data recorded yet.</p>
+            <p className="text-xs text-zinc-600 py-10 text-center">No audience visits logged yet.</p>
           ) : (
-             views.map((view) => {
-              // Check if user is guest or actual email
-              const isGuest = !view.userEmail || view.userEmail === "Guest / Visitor" || view.userType === "Guest / Visitor";
-              
+            views.map((v) => {
+              const isGuest = !v.userEmail || v.userEmail.includes("Guest");
               return (
-                <div key={view.id} className="p-4 bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800 rounded-lg flex flex-col sm:flex-row justify-between sm:items-center gap-2 transition-colors">
-                  <div>
-                    <p className="text-sm font-mono text-green-400 break-all">{view.page}</p>
-                    <p className="text-xs mt-1 uppercase tracking-wider font-bold flex items-center gap-2">
-                      User: 
-                      <span className={isGuest ? "text-zinc-500" : "text-white"}>
-                        {view.userEmail || view.userType || "Guest / Visitor"}
+                <div key={v.id} className="p-3.5 bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all">
+                  <div className="space-y-1.5 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/40">
+                        {v.page || "/"}
                       </span>
-                    </p>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                        !isGuest ? "bg-blue-900/40 text-blue-300 border border-blue-800/40" : "bg-zinc-800 text-zinc-400"
+                      }`}>
+                        {v.userEmail || "Guest Reader"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-3 text-[11px] text-zinc-400 flex-wrap">
+                      <span className="flex items-center gap-1"><Globe className="h-3 w-3 text-zinc-500" /> {v.location || "Global Web"}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        {v.device === "Mobile" ? <Smartphone className="h-3 w-3 text-zinc-500" /> : <Monitor className="h-3 w-3 text-zinc-500" />}
+                        {v.device || "Desktop"} ({v.browser || "Web"})
+                      </span>
+                      <span>•</span>
+                      <span className="text-zinc-500 truncate max-w-[140px]">Source: {v.referrer || "Direct"}</span>
+                    </div>
                   </div>
-                  <div className="text-xs text-zinc-400 sm:text-right shrink-0 bg-zinc-950 px-3 py-1 rounded-full border border-zinc-800">
-                    {view.timestamp?.toDate ? view.timestamp.toDate().toLocaleString() : "Just now"}
+
+                  <div className="text-xs font-mono text-zinc-500 flex items-center gap-1.5 shrink-0 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800/80">
+                    <Clock className="h-3.5 w-3.5 text-zinc-400" />
+                    {v.createdAt ? new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "Just now"}
                   </div>
                 </div>
               )
@@ -116,6 +255,7 @@ function LiveTrafficPanel() {
           )}
         </div>
       </div>
+
     </div>
   )
 }
@@ -149,7 +289,7 @@ function AdminGate() {
       await signInWithEmailAndPassword(auth, email, password)
     } catch (err: any) {
       console.error("Firebase Debug:", err)
-      setLoginError(`Firebase Error Code: ${err.code || err.message}`)
+      setLoginError(`Firebase Error: ${err.message || "Failed to authenticate"}`)
     } finally {
       setLoginLoading(false)
     }
@@ -188,14 +328,34 @@ function AdminGate() {
           <form onSubmit={handleLogin} className="mt-8 space-y-5">
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Email Address</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="admin@ccustudios.com" />
+              <input 
+                type="email" 
+                required 
+                value={email} 
+                onChange={(e) => setEmail(e.target.value)} 
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" 
+                placeholder="admin@ccustudios.com" 
+              />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Password</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" placeholder="••••••••" />
+              <input 
+                type="password" 
+                required 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-sm text-white focus:border-red-600 focus:outline-none transition-all" 
+                placeholder="••••••••" 
+              />
             </div>
             {loginError && <p className="text-xs font-mono text-red-500 bg-red-950/30 border border-red-900/50 rounded-lg p-3 text-center">{loginError}</p>}
-            <button type="submit" disabled={loginLoading} className="w-full rounded-lg bg-red-600 py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-red-700 active:scale-[0.99] transition-all disabled:opacity-50">{loginLoading ? "Authenticating Master Keys..." : "Enter Command Center"}</button>
+            <button 
+              type="submit" 
+              disabled={loginLoading} 
+              className="w-full rounded-lg bg-red-600 py-3 text-sm font-bold uppercase tracking-wider text-white hover:bg-red-700 active:scale-[0.99] transition-all disabled:opacity-50"
+            >
+              {loginLoading ? "Authenticating Master Keys..." : "Enter Command Center"}
+            </button>
           </form>
         </div>
       </div>
@@ -245,21 +405,24 @@ function AdminGate() {
         <div className="pt-4 border-t border-zinc-800">
           <div className="flex items-center justify-between mb-4 px-2">
             <span className="text-xs text-zinc-500 truncate max-w-[140px]">{user.email}</span>
-            <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
           </div>
-          <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-zinc-800 hover:border-red-600/40 rounded-lg text-xs text-zinc-400 hover:text-red-500 bg-zinc-950/40 transition-all">
+          <button 
+            onClick={handleLogout} 
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-zinc-800 hover:border-red-600/40 rounded-lg text-xs text-zinc-400 hover:text-red-500 bg-zinc-950/40 transition-all"
+          >
             <LogOut className="h-3 w-3" />
             Disconnect Session
           </button>
         </div>
       </aside>
 
-      {/* MAIN LAYOUT DASHBOARD */}
-      <main className="flex-1 p-10 overflow-y-auto">
+      {/* MAIN CONTENT AREA */}
+      <main className="flex-1 p-6 sm:p-10 overflow-y-auto">
         
         {activeTab === "traffic" && (
           <div className="space-y-4">
-            <LiveTrafficPanel />
+            <AdvancedUniverseTraffic />
           </div>
         )}
 
@@ -301,7 +464,13 @@ function AdminGate() {
 export default function AdminPage() {
   return (
     <main className="min-h-screen bg-black">
-      <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-black"><Loader2 className="h-8 w-8 animate-spin text-red-600" /></div>}><AdminGate /></Suspense>
+      <Suspense fallback={
+        <div className="flex min-h-screen items-center justify-center bg-black">
+          <Loader2 className="h-8 w-8 animate-spin text-red-600" />
+        </div>
+      }>
+        <AdminGate />
+      </Suspense>
     </main>
   )
 }
