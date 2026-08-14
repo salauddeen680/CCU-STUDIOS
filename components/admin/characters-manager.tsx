@@ -6,6 +6,16 @@ import { useCharacters, createCharacter, updateCharacter, deleteCharacter } from
 import { ImageUploader } from "./image-uploader"
 import type { Character } from "@/lib/types"
 
+// 🛡️ Auto-Slug Utility Function
+const generateCleanSlug = (text: string) => {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
 const empty = {
   name: "",
   bio: "",
@@ -50,8 +60,10 @@ export function CharactersManager() {
   async function save() {
     if (!form.name.trim()) return
     setSaving(true)
+    const generatedSlug = generateCleanSlug(form.name)
     const payload = {
       ...form,
+      slug: generatedSlug, // 👈 Clean Slug Injection
       powers: powersText.split(",").map((s) => s.trim()).filter(Boolean),
       arcs: arcsText.split("\n").map((s) => s.trim()).filter(Boolean),
     }
@@ -67,6 +79,7 @@ export function CharactersManager() {
       setArcsText("")
       setEditing(null)
       alert("Character profile saved successfully! 🔥")
+      window.location.reload()
     } catch (err) {
       console.error("Failed to save character:", err)
       alert("Save karne mein dikkat aayi.")
@@ -79,6 +92,7 @@ export function CharactersManager() {
     if (confirm("Delete this character permanently?")) {
       try {
         await deleteCharacter(id)
+        window.location.reload()
       } catch (err) {
         console.error("Failed to delete character:", err)
       }
