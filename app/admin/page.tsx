@@ -6,7 +6,7 @@ import {
   Loader2, Lock, LayoutDashboard, BookOpen, UserSquare2, 
   MessageSquare, LogOut, Video, Activity, Eye, Globe, 
   Smartphone, Monitor, ShieldCheck, TrendingUp, RefreshCw,
-  Clock, Users, Trash2
+  Clock, Users, Trash2, Calendar
 } from "lucide-react" 
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, User } from "firebase/auth"
@@ -90,6 +90,35 @@ function AdvancedUniverseTraffic() {
   useEffect(() => {
     fetchTrafficData()
   }, [])
+
+  // 🕒 Accurate Date & Time Formatter
+  const formatEventTimestamp = (v: any) => {
+    try {
+      if (v.timestamp?.toDate) {
+        return v.timestamp.toDate().toLocaleString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      }
+      if (v.createdAt) {
+        return new Date(v.createdAt).toLocaleString('en-IN', {
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        })
+      }
+      return "Live Just Now"
+    } catch {
+      return "Live Activity"
+    }
+  }
 
   if (loading) {
     return (
@@ -231,57 +260,59 @@ function AdvancedUniverseTraffic() {
         )}
       </div>
 
-      {/* 📡 Live Visitor Stream Feed */}
+      {/* 📡 Live Visitor Stream Feed with Exact Time & Details */}
       <div className="bg-zinc-900/30 border border-zinc-800 p-5 rounded-2xl">
         <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
           <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2">
-            <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Stream Feed
+            <Globe className="h-4 w-4 text-emerald-400" /> Live Visitor Activity Stream & Timestamps
           </h3>
-          <span className="text-[10px] font-mono text-zinc-500">Filtered Public Readers</span>
+          <span className="text-[10px] font-mono text-zinc-500">Public Sessions Feed</span>
         </div>
 
-        <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
+        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
           {views.length === 0 ? (
             <div className="py-12 text-center">
               <p className="text-sm font-semibold text-zinc-400">Ready for Live Traffic 🚀</p>
-              <p className="text-xs text-zinc-600 mt-1">Real visitors browsing comics or characters will show up here in real time.</p>
+              <p className="text-xs text-zinc-600 mt-1">Real visitors browsing comics or characters will show up here with live timestamps.</p>
             </div>
           ) : (
             views.map((v) => {
               const isGuest = !v.userEmail || v.userEmail.includes("Guest");
               return (
-                <div key={v.id} className="p-3.5 bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all">
-                  <div className="space-y-1.5 min-w-0">
+                <div key={v.id} className="p-4 bg-zinc-950 border border-zinc-800/80 hover:border-zinc-700 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3 transition-all">
+                  <div className="space-y-2 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/40">
-                        {v.page || "/"}
+                      <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/60 px-2.5 py-1 rounded-md border border-emerald-800/40">
+                        Viewed: {v.page || "/"}
                       </span>
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                        !isGuest ? "bg-blue-900/40 text-blue-300 border border-blue-800/40" : "bg-zinc-800 text-zinc-400"
+                        !isGuest ? "bg-blue-900/40 text-blue-300 border border-blue-800/40" : "bg-zinc-800 text-zinc-400 border border-zinc-700"
                       }`}>
                         {v.userEmail || "Guest Reader"}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3 text-[11px] text-zinc-400 flex-wrap">
-                      <span className="flex items-center gap-1"><Globe className="h-3 w-3 text-zinc-500" /> {v.location || "Global Web"}</span>
-                      <span>•</span>
-                      <span className="flex items-center gap-1">
-                        {v.device?.includes("Mobile") || v.device?.includes("iPhone") || v.device?.includes("Android") ? (
-                          <Smartphone className="h-3 w-3 text-purple-400" />
-                        ) : (
-                          <Monitor className="h-3 w-3 text-blue-400" />
-                        )}
-                        {v.device || "Desktop"} ({v.browser || "Web"})
+                    <div className="flex items-center gap-3 text-xs text-zinc-400 flex-wrap">
+                      <span className="flex items-center gap-1.5 font-medium text-zinc-300">
+                        <Globe className="h-3.5 w-3.5 text-zinc-500" /> {v.location || "Global Web"}
                       </span>
                       <span>•</span>
-                      <span className="text-zinc-500 truncate max-w-[140px]">Source: {v.referrer || "Direct"}</span>
+                      <span className="flex items-center gap-1.5 font-medium text-zinc-300">
+                        {v.device?.includes("Mobile") || v.device?.includes("iPhone") || v.device?.includes("Android") ? (
+                          <Smartphone className="h-3.5 w-3.5 text-purple-400" />
+                        ) : (
+                          <Monitor className="h-3.5 w-3.5 text-blue-400" />
+                        )}
+                        {v.device || "Desktop"} ({v.browser || "Browser"})
+                      </span>
+                      <span>•</span>
+                      <span className="text-zinc-500 truncate max-w-[180px]">Source: {v.referrer || "Direct"}</span>
                     </div>
                   </div>
 
-                  <div className="text-xs font-mono text-zinc-500 flex items-center gap-1.5 shrink-0 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-800/80">
-                    <Clock className="h-3.5 w-3.5 text-zinc-400" />
-                    {v.createdAt ? new Date(v.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "Just now"}
+                  <div className="text-xs font-mono text-zinc-200 flex items-center gap-2 shrink-0 bg-zinc-900/90 px-3.5 py-2 rounded-lg border border-zinc-800 self-start md:self-center">
+                    <Clock className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>{formatEventTimestamp(v)}</span>
                   </div>
                 </div>
               )
