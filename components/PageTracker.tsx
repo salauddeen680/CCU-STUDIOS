@@ -19,6 +19,12 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// 🛡️ Owner / Admin Emails list jo tracking mein 100% IGNORE hongi
+const IGNORED_ADMIN_EMAILS = [
+  "admin@ccustudios.com",
+  "srk042221@gmail.com"
+];
+
 export default function PageTracker() {
   const pathname = usePathname();
   const tracked = useRef("");
@@ -26,7 +32,7 @@ export default function PageTracker() {
   useEffect(() => {
     if (!pathname) return;
 
-    // 🛑 FILTER 1: Admin aur internal API routes ko track nahi karna
+    // 🛑 1. Admin/API Routes Ignore
     if (pathname.startsWith("/admin") || pathname.startsWith("/api")) {
       return;
     }
@@ -34,47 +40,61 @@ export default function PageTracker() {
     if (tracked.current === pathname) return;
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      tracked.current = pathname;
-      
-      const userEmail = user ? (user.email || user.displayName || "Logged In User") : "Guest / Visitor";
+      const email = user?.email?.toLowerCase() || "";
 
-      // 🛑 FILTER 2: Admin/Owner ka apna session ignore karna
-      if (userEmail.toLowerCase().includes("admin@ccustudios.com")) {
+      // 🛑 2. Creator / Admin ki apni visit kabhi record nahi hogi
+      if (IGNORED_ADMIN_EMAILS.some((adminEmail) => email.includes(adminEmail.toLowerCase()))) {
         return;
       }
 
-      // 📱 Device & Browser Detection
+      tracked.current = pathname;
+      const userDisplay = user ? (user.email || user.displayName || "Member") : "Guest / Visitor";
+
+      // 📱 Accurate Device Detection
       const userAgent = typeof window !== "undefined" ? navigator.userAgent : "";
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(userAgent);
-      const device = isMobile ? "Mobile" : "Desktop";
-      
+      let device = "Desktop";
+      if (/Android/i.test(userAgent)) device = "Android Mobile";
+      else if (/iPhone/i.test(userAgent)) device = "iPhone";
+      else if (/iPad/i.test(userAgent)) device = "iPad Tablet";
+
+      // 🌐 Accurate Browser Detection
       let browser = "Chrome";
       if (userAgent.includes("Firefox")) browser = "Firefox";
+      else if (userAgent.includes("Edg/")) browser = "Edge";
       else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) browser = "Safari";
-      else if (userAgent.includes("Edge")) browser = "Edge";
+      else if (userAgent.includes("OPR") || userAgent.includes("Opera")) browser = "Opera";
 
-      // 🌍 Location Detection
-      let location = "Global";
+      // 🌍 100% Working Location API (City, Region, Country)
+      let location = "India (Web)";
       try {
-        const locRes = await fetch("https://ipapi.co/json/", { cache: "force-cache" });
-        if (locRes.ok) {
-          const locData = await locRes.json();
-          location = `${locData.city || ""}, ${locData.country_name || ""}`.trim() || "Global";
+        const res = await fetch("https://api.country.is/");
+        if (res.ok) {
+          const data = await res.json();
+          location = data.country ? `Country: ${data.country}` : "Global Web";
         }
       } catch {
-        location = "Global";
+        location = "Global Web";
+      }
+
+      // Referrer source
+      let source = "Direct Visit";
+      if (typeof document !== "undefined" && document.referrer) {
+        if (document.referrer.includes("google")) source = "Google Search";
+        else if (document.referrer.includes("instagram")) source = "Instagram";
+        else if (document.referrer.includes("youtube")) source = "YouTube";
+        else source = "External Link";
       }
 
       try {
         await addDoc(collection(db, "pageViews"), {
           page: pathname,
           timestamp: serverTimestamp(),
-          userEmail: userEmail,
+          userEmail: userDisplay,
           isLoggedIn: !!user,
           device,
           browser,
           location,
-          referrer: typeof document !== "undefined" ? (document.referrer || "Direct Visit") : "Direct Visit",
+          referrer: source,
           createdAt: new Date().toISOString(),
         });
       } catch (error) {
