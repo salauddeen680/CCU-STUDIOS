@@ -5,8 +5,6 @@ import {
   Heart, 
   Trash2, 
   MessageSquare, 
-  BookOpen, 
-  UserCheck, 
   Eye, 
   Globe, 
   Smartphone, 
@@ -14,7 +12,8 @@ import {
   Clock, 
   Activity, 
   TrendingUp, 
-  ShieldCheck 
+  ShieldCheck,
+  UserCheck 
 } from "lucide-react"
 import { useComics, useCharacters, useAllComments, deleteComment } from "@/lib/data"
 import { db } from "@/lib/firebase"
@@ -31,7 +30,6 @@ export function EngagementPanel() {
   const [trafficLoading, setTrafficLoading] = useState(true)
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  // ⚡ Live Real-time Firestore Listener (No Refresh Needed)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "pageViews"), (snapshot) => {
       const docs = snapshot.docs.map((doc) => ({
@@ -39,7 +37,6 @@ export function EngagementPanel() {
         ...doc.data(),
       }))
 
-      // Clean filter
       const cleanVisitors = docs.filter((item: any) => {
         const email = (item.userEmail || "").toLowerCase()
         const isBlocked = BLOCKED_EMAILS.some((b) => email.includes(b.toLowerCase()))
@@ -47,7 +44,6 @@ export function EngagementPanel() {
         return !isBlocked && !isAdminRoute
       })
 
-      // Sort by newest first
       cleanVisitors.sort((a: any, b: any) => {
         const timeA = a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp?.seconds ? a.timestamp.seconds * 1000 : 0)
         const timeB = b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp?.seconds ? b.timestamp.seconds * 1000 : 0)
@@ -64,7 +60,6 @@ export function EngagementPanel() {
     return () => unsubscribe()
   }, [])
 
-  // Exact Time Formatter
   const formatEventTime = (item: any) => {
     try {
       let dateObj: Date | null = null
@@ -98,7 +93,6 @@ export function EngagementPanel() {
   const loggedInVisits = trafficEvents.filter((e) => e.isLoggedIn || (e.userEmail && !e.userEmail.includes("Guest"))).length
   const guestVisits = totalRealViews - loggedInVisits
 
-  // Top Pages
   const pageCounts: Record<string, number> = {}
   trafficEvents.forEach((e) => {
     const p = e.page || "/"
@@ -121,17 +115,15 @@ export function EngagementPanel() {
 
   return (
     <div className="space-y-6">
-      {/* Top Header */}
       <div className="flex items-center justify-between border-b border-zinc-800 pb-4">
         <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-          <Activity className="h-4 w-4 text-emerald-400 animate-pulse" /> Real-Time Engagement & Live Traffic
+          <Activity className="h-4 w-4 text-emerald-400 animate-pulse" /> Real-Time Live Traffic & Telemetry
         </h2>
         <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded flex items-center gap-1">
           <ShieldCheck className="h-3.5 w-3.5" /> Self-Spam Filter Active
         </span>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-xl p-4 border border-zinc-800 bg-zinc-900/40">
           <div className="flex items-center justify-between text-xs text-zinc-400">
@@ -166,11 +158,10 @@ export function EngagementPanel() {
             <Heart className="h-4 w-4 text-red-500" />
           </div>
           <p className="font-display text-2xl font-bold text-white mt-2">{totalLikes}</p>
-          <span className="text-[10px] text-zinc-500">Comics & Characters</span>
+          <span className="text-[10px] text-zinc-500">Comics & Lore</span>
         </div>
       </div>
 
-      {/* Top Read Comics Section */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-4">
         <h3 className="text-xs font-bold uppercase tracking-wider text-white flex items-center gap-2 mb-3">
           <TrendingUp className="h-4 w-4 text-red-500" /> Most Visited Pages & Content
@@ -191,7 +182,6 @@ export function EngagementPanel() {
         )}
       </div>
 
-      {/* Live Visitor Feed */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-5">
         <div className="mb-4 flex items-center justify-between border-b border-zinc-800 pb-3">
           <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
@@ -212,7 +202,7 @@ export function EngagementPanel() {
               <div key={item.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-zinc-950/60 p-3 rounded-lg border border-zinc-800/60">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/50 px-2 py-0.5 rounded border border-emerald-800/40">
+                    <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/50 px-2.5 py-0.5 rounded border border-emerald-800/40">
                       Viewed: {item.page || "/"}
                     </span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
@@ -247,7 +237,6 @@ export function EngagementPanel() {
         )}
       </div>
 
-      {/* Comments Moderation */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/30 p-5">
         <h3 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2 mb-4 border-b border-zinc-800 pb-3">
           <MessageSquare className="h-4 w-4 text-red-500" /> Audience Comments ({comments.length})
