@@ -3,14 +3,13 @@ import { SiteShell } from "@/components/site-shell"
 import { CharacterProfile } from "@/components/character-profile"
 
 type PageProps = {
-  params: {
-    id: string
-  }
+  params: Promise<{ id: string }> | { id: string }
 }
 
-// 🎯 Dynamic Metadata for Search Engines
+// 🎯 Dynamic Metadata for Search Engines & Google Bot
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const param = params.id
+  const resolvedParams = await params
+  const param = resolvedParams.id
   const baseUrl = "https://ccu-studios.vercel.app"
 
   try {
@@ -19,23 +18,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     if (!character || !character.name) {
       return {
-        title: "Character Profile — CCU Studios",
+        title: "Character Profile | CCU Studios",
         alternates: {
           canonical: `${baseUrl}/characters/${param}`,
         },
       }
     }
 
-    const canonicalPath = character.slug ? character.slug : param
+    // Faltu auto-ID ke bajaye character ke slug/clean name ko lock karega
+    const canonicalPath = character.slug || character.id || param
 
     return {
-      title: `${character.name} — CCU Studios Lore`,
+      title: `${character.name} | CCU Studios Lore`,
       description: character.bio || `Official biography and lore profile of ${character.name} in CCU.`,
       alternates: {
         canonical: `${baseUrl}/characters/${canonicalPath}`,
       },
       openGraph: {
-        title: `${character.name} — CCU Studios`,
+        title: `${character.name} | CCU Studios`,
         description: character.bio || `Explore the powers and storyline of ${character.name}.`,
         images: [character.image || `${baseUrl}/ccu-logo.png`],
         type: "profile",
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     }
   } catch (error) {
     return {
-      title: "Character Profile — CCU Studios",
+      title: "Character Profile | CCU Studios",
       description: "Explore legendary character profiles in the Cosmic Cinematic Universe.",
       alternates: {
         canonical: `${baseUrl}/characters/${param}`,
@@ -53,7 +53,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CharacterPage({ params }: PageProps) {
-  const param = params.id
+  const resolvedParams = await params
+  const param = resolvedParams.id
   const baseUrl = "https://ccu-studios.vercel.app"
   let characterData = null
 
@@ -64,7 +65,7 @@ export default async function CharacterPage({ params }: PageProps) {
     console.error("Failed to fetch character data for schema", e)
   }
 
-  const activeSlugOrId = characterData?.slug || param
+  const activeSlugOrId = characterData?.slug || characterData?.id || param
 
   // 🎭 Schema.org JSON-LD Structured Data
   const jsonLd = characterData && characterData.name ? {
