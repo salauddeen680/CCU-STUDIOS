@@ -2,8 +2,10 @@
 
 import { useState, useRef } from "react";
 import { Plus, Trash2, Loader2, Upload, CheckCircle2, X, Edit2, Lock, BookOpen, Clock } from "lucide-react";
-import { useComics, createComic, deleteComic, updateComic } from "@/lib/data";
+import { useComics, deleteComic } from "@/lib/data";
 import { ImageUploader } from "./image-uploader";
+import { db } from "@/lib/firebase";
+import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 
 // 🛡️ Auto-Slug Utility Function
 const generateCleanSlug = (text: string) => {
@@ -63,7 +65,6 @@ export function ComicsManager() {
     }
   };
 
-  // 🛡️ MAIN FIX 1: Ab ye purani aur nayi dono comics ko sahi se pehchanega
   const detectAccessType = (comic: any): "free" | "teaser_9" | "full_paid" => {
     const isPremium = comic.isPaid === true || comic.paid === true;
     if (!isPremium) return "free";
@@ -110,7 +111,7 @@ export function ComicsManager() {
     }
   };
 
-  // 💾 NEW COMIC API Handler (Auto Slug Fix Injected)
+  // 💾 NEW COMIC: Direct Clean Slug Document ID Lock
   const handleSaveComic = async () => {
     if (!title.trim() || !description.trim()) {
       alert("Title aur Description dena zaroori hai bhai!");
@@ -121,9 +122,12 @@ export function ComicsManager() {
       const { isPaid, freePages } = getAccessValues(accessType);
       const generatedSlug = generateCleanSlug(title);
 
-      await createComic({
+      // 🔥 Random ID hatakar title slug se document banega
+      const comicRef = doc(db, "comics", generatedSlug);
+      await setDoc(comicRef, {
+        id: generatedSlug,
         title,
-        slug: generatedSlug, // 👈 Clean Slug Injection
+        slug: generatedSlug,
         description,
         timeline,
         cover: coverUrl || "",
@@ -132,12 +136,15 @@ export function ComicsManager() {
         isPaid: isPaid,
         paid: isPaid,
         freePages,
-        publishStatus
+        publishStatus,
+        createdAt: serverTimestamp(),
+        likes: 0
       });
+
       setTitle(""); setDescription(""); setCoverUrl(""); setPageUrls([]);
       setUploadProgress(""); setAccessType("free"); setPublishStatus("published");
       setIsOpen(false);
-      alert("Comic Setup Successfully! 🎉");
+      alert("Comic Setup Successfully with Clean URL! 🎉");
       window.location.reload();
     } catch (err) {
       console.error(err);
@@ -159,7 +166,7 @@ export function ComicsManager() {
     setEditPublishStatus(comic.publishStatus || "published"); 
   };
 
-  // 💾 Update API Handler (Auto Slug Update Injected)
+  // 💾 Update API Handler
   const handleUpdateComic = async () => {
     if (!editingComicId) return;
     if (!editTitle.trim() || !editDescription.trim()) {
@@ -172,9 +179,10 @@ export function ComicsManager() {
       const { isPaid, freePages } = getAccessValues(editAccessType);
       const updatedSlug = generateCleanSlug(editTitle);
 
-      await updateComic(editingComicId, {
+      const comicRef = doc(db, "comics", editingComicId);
+      await updateDoc(comicRef, {
         title: editTitle,
-        slug: updatedSlug, // 👈 Clean Slug Injection
+        slug: updatedSlug,
         description: editDescription,
         timeline: editTimeline,
         cover: editCoverUrl,
@@ -183,8 +191,10 @@ export function ComicsManager() {
         isPaid: isPaid,
         paid: isPaid,
         freePages,
-        publishStatus: editPublishStatus
+        publishStatus: editPublishStatus,
+        updatedAt: serverTimestamp(),
       });
+
       setEditingComicId(null);
       alert("Comic Updated Successfully! 🔄");
       window.location.reload();
