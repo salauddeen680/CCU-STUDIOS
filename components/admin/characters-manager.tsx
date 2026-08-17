@@ -2,9 +2,11 @@
 
 import { useState } from "react"
 import { Pencil, Trash2, Plus, Save, X } from "lucide-react"
-import { useCharacters, createCharacter, updateCharacter, deleteCharacter } from "@/lib/data"
+import { useCharacters, deleteCharacter } from "@/lib/data"
 import { ImageUploader } from "./image-uploader"
 import type { Character } from "@/lib/types"
+import { db } from "@/lib/firebase"
+import { doc, setDoc, updateDoc, serverTimestamp } from "firebase/firestore"
 
 // 🛡️ Auto-Slug Utility Function
 const generateCleanSlug = (text: string) => {
@@ -61,18 +63,31 @@ export function CharactersManager() {
     if (!form.name.trim()) return
     setSaving(true)
     const generatedSlug = generateCleanSlug(form.name)
+    
     const payload = {
       ...form,
-      slug: generatedSlug, // 👈 Clean Slug Injection
+      slug: generatedSlug,
       powers: powersText.split(",").map((s) => s.trim()).filter(Boolean),
       arcs: arcsText.split("\n").map((s) => s.trim()).filter(Boolean),
+      updatedAt: serverTimestamp(),
     }
+
     try {
       if (editing) {
-        await updateCharacter(editing.id, payload)
+        // Purana character update karna
+        const charRef = doc(db, "characters", editing.id)
+        await updateDoc(charRef, payload)
       } else {
-        await createCharacter(payload)
+        // 🔥 Naya character: Direct clean name slug wali exact document ID banegi
+        const charRef = doc(db, "characters", generatedSlug)
+        await setDoc(charRef, {
+          ...payload,
+          id: generatedSlug,
+          createdAt: serverTimestamp(),
+          likes: 0,
+        })
       }
+
       setShowForm(false)
       setForm({ ...empty })
       setPowersText("")
@@ -153,7 +168,6 @@ export function CharactersManager() {
             className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-white outline-none focus:border-red-600 resize-none"
           />
 
-          {/* 🖼️ Profile Avatar Section linked with updated Imgbb Pipeline */}
           <div>
             <p className="mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Profile Main Avatar</p>
             <ImageUploader
@@ -166,7 +180,6 @@ export function CharactersManager() {
             )}
           </div>
 
-          {/* 🎨 Character Gallery Section linked with updated Imgbb Pipeline */}
           <div>
             <p className="mb-2 text-xs font-semibold text-zinc-400 uppercase tracking-wider">Character Gallery / Concept Art ({form.gallery.length})</p>
             <ImageUploader
