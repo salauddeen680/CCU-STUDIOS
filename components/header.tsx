@@ -9,7 +9,7 @@ import { useComics, useCharacters } from "@/lib/data"
 
 // 🔥 FIREBASE IMPORTS FOR LOGIN & DATABASE
 import { auth, db } from "@/lib/firebase" 
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth"
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 
 const NAV = [
@@ -34,43 +34,59 @@ export function Header() {
 
   // 🔄 AUTH LISTENER: Website ko batayega ki fan logged in hai ya nahi
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
+
+      // Persistent Firestore Profile creation post-redirect / post-popup
+      if (currentUser) {
+        try {
+          const userRef = doc(db, "users", currentUser.uid)
+          const userSnap = await getDoc(userRef)
+
+          if (!userSnap.exists()) {
+            await setDoc(userRef, {
+              name: currentUser.displayName || "CCU Fan",
+              email: currentUser.email,
+              isPremium: false,
+              premiumExpiry: null,
+              joinedAt: new Date().toISOString()
+            })
+            console.log("New CCU Fan Profile Created!")
+          }
+        } catch (err) {
+          console.error("Firestore sync error:", err)
+        }
+      }
     })
     return () => unsubscribe()
   }, [])
 
-  // 🚀 GOOGLE LOGIN & DATABASE SAVER LOGIC
+  // 🚀 GOOGLE LOGIN WITH ACCOUNT CHOOSER & MOBILE FALLBACK
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return
     setIsLoggingIn(true)
     try {
       const provider = new GoogleAuthProvider()
       
-      // 👑 Account Chooser Force Line Added
+      // 👑 Force Account List + User Confirmation Screen
       provider.setCustomParameters({
-        prompt: "select_account"
+        prompt: "select_account consent"
       })
 
-      const result = await signInWithPopup(auth, provider)
-      const loggedInUser = result.user
-
-      // Firestore check: Kya yeh fan pehli baar aaya hai?
-      const userRef = doc(db, "users", loggedInUser.uid)
-      const userSnap = await getDoc(userRef)
-
-      if (!userSnap.exists()) {
-        // Naya fan hai! Database mein profile bana do
-        await setDoc(userRef, {
-          name: loggedInUser.displayName || "CCU Fan",
-          email: loggedInUser.email,
-          isPremium: false,        // Default status: Free user
-          premiumExpiry: null,     // Default expiry: None
-          joinedAt: new Date().toISOString()
-        })
-        console.log("New CCU Fan Profile Created!")
-      } else {
-        console.log("Welcome back to CCU!")
+      try {
+        // First try popup
+        await signInWithPopup(auth, provider)
+      } catch (popupError: any) {
+        // Mobile browsers popup block case: Use direct redirect fallback
+        if (
+          popupError?.code === "auth/popup-blocked" || 
+          popupError?.code === "auth/popup-closed-by-user" ||
+          popupError?.code === "auth/cancelled-popup-request"
+        ) {
+          await signInWithRedirect(auth, provider)
+        } else {
+          throw popupError
+        }
       }
     } catch (error) {
       console.error("Login failed:", error)
@@ -149,7 +165,7 @@ export function Header() {
             <Search className="h-4 w-4" />
           </button>
 
-          {/* 🔐 AUTH SYSTEM (Desktop & Mobile) */}
+          {/* 🔐 AUTH SYSTEM (Desktop & Mobile Header) */}
           <div className="hidden sm:flex items-center">
             {user ? (
               <div className="flex items-center gap-3 ml-2 border-l border-zinc-800 pl-4">
@@ -171,7 +187,7 @@ export function Header() {
                 disabled={isLoggingIn}
                 className="ml-2 flex items-center gap-2 rounded-lg bg-white px-4 py-1.5 text-xs font-bold text-black hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10"
               >
-                {isLoggingIn ? "Logging in..." : "Login"} <LogIn className="h-3.5 w-3.5" />
+                {isLoggingIn ? "Connecting..." : "Login"} <LogIn className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
