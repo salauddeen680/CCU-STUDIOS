@@ -46,6 +46,12 @@ export function Header() {
     setIsLoggingIn(true)
     try {
       const provider = new GoogleAuthProvider()
+      
+      // 👑 Account Chooser Force Line Added
+      provider.setCustomParameters({
+        prompt: "select_account"
+      })
+
       const result = await signInWithPopup(auth, provider)
       const loggedInUser = result.user
 
