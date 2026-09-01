@@ -13,6 +13,14 @@ const nextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/__/auth/:path*',
+        destination: 'https://ccu-studios.firebaseapp.com/__/auth/:path*',
+      },
+    ];
+  },
 }
 
 export default nextConfig;
