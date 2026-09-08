@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Java JDK
@@ -20,18 +20,19 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Node.js
+      - name: Setup Node.js Environment
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Generate Clean Android Wrapper With CCU Logo & Fullscreen Settings
+      - name: Generate Production Android Wrapper
         run: |
           mkdir /tmp/app-build
           cd /tmp/app-build
           npm init -y
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0 @capacitor/assets@3.0.5
 
+          # 1. Capacitor Config with Native App User-Agent
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.ccustudios.app",
@@ -43,15 +44,16 @@ jobs:
               "cleartext": true
             },
             "android": {
-              "allowMixedContent": true
+              "allowMixedContent": true,
+              "appendUserAgent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"
             }
           }
           EOF
 
           mkdir public
-          echo "<html><body>Loading CCU Studios...</body></html>" > public/index.html
+          echo "<html><body style='background-color:#000;color:#fff;'>Loading CCU Studios...</body></html>" > public/index.html
 
-          # Official CCU Logo setup
+          # 2. Setup Official CCU Red Logo for App Icons
           mkdir -p assets
           curl -sL "https://ccu-studios.vercel.app/ccu-logo.png" -o assets/logo.png
           cp assets/logo.png assets/icon-only.png
@@ -59,30 +61,68 @@ jobs:
           cp assets/logo.png assets/icon-background.png
           cp assets/logo.png assets/splash.png
 
+          # 3. Add Android Platform & Generate Icons
           npx cap add android
           npx capacitor-assets generate --android
 
-          # 🔥 YAHAN HAI FULLSCREEN, NETWORK AUR POPUP WINDOW PERMISSIONS 🔥
+          # 4. Patch Android Manifest for Full Internet & Cleartext
           sed -i '/<application/a \        android:usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.useAndroidX=true" >> android/gradle.properties
 
+          # 5. Native Patch: Enable Web Popups & Windows in MainActivity for Firebase Auth
+          cat << 'EOF' > patch.py
+          import os
+
+          path = "android/app/src/main/java/com/ccustudios/app/MainActivity.java"
+          if os.path.exists(path):
+              with open(path, "r") as f:
+                  content = f.read()
+
+              import_stmt = "import android.webkit.WebSettings;\nimport android.os.Bundle;\n"
+              if "import android.webkit.WebSettings;" not in content:
+                  content = content.replace("package com.ccustudios.app;", "package com.ccustudios.app;\n" + import_stmt)
+
+              method_code = """
+              @Override
+              public void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  if (this.bridge != null && this.bridge.getWebView() != null) {
+                      WebSettings settings = this.bridge.getWebView().getSettings();
+                      settings.setJavaScriptCanOpenWindowsAutomatically(true);
+                      settings.setSupportMultipleWindows(true);
+                  }
+              }
+              """
+
+              if "@Override\n    public void onCreate" not in content:
+                  pos = content.rfind("}")
+                  if pos != -1:
+                      content = content[:pos] + method_code + "\n}"
+
+              with open(path, "w") as f:
+                  f.write(content)
+          EOF
+          python3 patch.py
+
+          # 6. Compile APK and AAB Release
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
           ./gradlew bundleDebug --no-daemon
 
+          # 7. Collect Outputs
           mkdir -p $GITHUB_WORKSPACE/output
           cp app/build/outputs/apk/debug/app-debug.apk $GITHUB_WORKSPACE/output/CCU-Studios.apk
           cp app/build/outputs/bundle/debug/app-debug.aab $GITHUB_WORKSPACE/output/CCU-Studios.aab
 
-      - name: Upload APK (Direct Install)
+      - name: Upload APK (Direct Mobile Install)
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-Direct-Install-APK
           path: output/CCU-Studios.apk
 
-      - name: Upload AAB (Store Bundle)
+      - name: Upload AAB (Store Release Bundle)
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-Store-AAB
