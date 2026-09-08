@@ -8,14 +8,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
@@ -25,42 +17,65 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 🔥 FIX: Stable Capacitor 6 versions pin kiye hain taaki duplicate class clash na ho
-      - name: Install Capacitor CLI & Core
-        run: |
-          npm install -D @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
-      - name: Initialize Android Native Project
+      # 🔥 ISOLATED ENVIRONMENT: Clean folder banakar Capacitor 6 build hoga bina kisi clash ke
+      - name: Generate Clean Android Wrapper
         run: |
+          mkdir /tmp/app-build
+          cd /tmp/app-build
+          npm init -y
+          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
+
+          cat << 'EOF' > capacitor.config.json
+          {
+            "appId": "com.ccustudios.app",
+            "appName": "CCU Studios",
+            "webDir": "public",
+            "bundledWebRuntime": false,
+            "server": {
+              "url": "https://ccu-studios.vercel.app",
+              "cleartext": true
+            },
+            "android": {
+              "allowMixedContent": true
+            }
+          }
+          EOF
+
+          mkdir public
+          echo "<html><body>Loading CCU Studios...</body></html>" > public/index.html
+
           npx cap add android
-          npx cap sync android
 
-      # 🔥 FIX: Duplicate classes aur cleartext traffic resolve karne ke flags
-      - name: Fix Android Manifest & Gradle Properties
-        run: |
+          # Fullscreen aur Network Permission configuration
           sed -i '/<application/a \        android:usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml
+          
+          # Duplicate classes prevent karne ke liye flags
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.useAndroidX=true" >> android/gradle.properties
 
-      - name: Build Debug APK
-        run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
-
-      - name: Build Release Bundle (Unsigned AAB)
-        run: |
-          cd android
           ./gradlew bundleDebug --no-daemon
 
-      - name: Upload APK Artifact
+          # Artifacts ko workspace par copy karein
+          mkdir -p $GITHUB_WORKSPACE/output
+          cp app/build/outputs/apk/debug/app-debug.apk $GITHUB_WORKSPACE/output/CCU-Studios.apk
+          cp app/build/outputs/bundle/debug/app-debug.aab $GITHUB_WORKSPACE/output/CCU-Studios.aab
+
+      - name: Upload APK (Direct Install)
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-Direct-Install-APK
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: output/CCU-Studios.apk
 
-      - name: Upload AAB Artifact
+      - name: Upload AAB (Store Bundle)
         uses: actions/upload-artifact@v4
         with:
-          name: CCU-Studios-PlayStore-AAB
-          path: android/app/build/outputs/bundle/debug/app-debug.aab
+          name: CCU-Studios-Store-AAB
+          path: output/CCU-Studios.aab
