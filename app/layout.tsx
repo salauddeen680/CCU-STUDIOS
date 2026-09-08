@@ -28,7 +28,7 @@ export const metadata: Metadata = {
   keywords: ["comics", "characters", "CCU Studios", "cosmic cinematic universe", "manga", "Salauddin", "Saif CCU"],
   authors: [{ name: "Salauddin" }, { name: "Salauddin (Saif)" }],
   alternates: {
-    canonical: "./",
+    canonical: "/", // 🔥 FIX: "./" ko "/" kar diya taaki canonical properly kaam kare
   },
   robots: {
     index: true,
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/ccu-logo.png",
   },
-  manifest: "/manifest.json", // <--- 🔥 YAHAN APP BANANE WALI LINE ADD HO GAYI HAI
+  manifest: "/manifest.json", 
 }
 
 export const viewport: Viewport = {
@@ -110,16 +110,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(studioSchema) }}
         />
-        {/* 🔥 Payment Popup ka asli solution: Razorpay SDK */}
-        <script src="https://checkout.razorpay.com/v1/checkout.js" async />
+        {/* 🔥 FIX: Raw script ki jagah Next.js Script component use kiya */}
+        <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
-        <PageTracker /> {/* 🔥 Firebase Tracker yahan laga diya */}
+        <PageTracker /> 
         {children}
-        <Analytics /> {/* 🔥 Vercel Analytics Component */}
+        <Analytics /> 
         
-        {/* 🔥 PWABuilder Service Worker Fix: Yeh script app ko offline support degi */}
-        <script
+        {/* 🔥 FIX: Service Worker ko bhi optimized Script tag mein convert kiya */}
+        <Script
+          id="pwa-sw"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
