@@ -6,8 +6,9 @@ import { VaultCard } from "./vault-card"
 import { GridSkeleton } from "./skeletons"
 
 export function UltimateList() {
-  const { comics, loading } = useComics()
+  const { comics = [], loading } = useComics()
   
+  // Sirf wahi comics filter hongi jo Ultimate hain
   const ultimateComics = comics.filter((c) => c.ultimate)
 
   if (loading) return <GridSkeleton count={4} />
@@ -25,33 +26,52 @@ export function UltimateList() {
       </div>
     )
 
-  const groupedBySeries: { [key: string]: any[] } = {}
-  
-  ultimateComics.forEach((comic) => {
-    const seriesName = comic.series || comic.title.split(":")[0].trim() || "Ultimate Series"
-    if (!groupedBySeries[seriesName]) {
-      groupedBySeries[seriesName] = []
+  // 🔥 EXACT SMART GROUPING LOGIC (ComicsList ki tarah series-wise group karega)
+  const groupedComics = ultimateComics.reduce((groups, comic) => {
+    let titleUpper = comic.title.toUpperCase()
+    let seriesName = "ULTIMATE SERIES"
+
+    if (titleUpper.includes("TRIVEXA")) {
+      seriesName = "TRIVEXA"
+    } else if (titleUpper.includes("ARYAN")) {
+      seriesName = "ARYAN: THE BEAST"
+    } else if (titleUpper.includes("ALLIANCE") || titleUpper.includes("CCU: THE ALLIANCE")) {
+      seriesName = "CCU: THE ALLIANCE"
+    } else {
+      seriesName = comic.title.split(/[:\-]|issue|chapter/i)[0].trim().toUpperCase()
     }
-    groupedBySeries[seriesName].push(comic)
-  })
+
+    if (!groups[seriesName]) {
+      groups[seriesName] = []
+    }
+    groups[seriesName].push(comic)
+    return groups
+  }, {} as Record<string, typeof comics>)
 
   return (
-    <div className="space-y-10">
-      {Object.entries(groupedBySeries).map(([seriesName, seriesComics]) => (
-        <div key={seriesName} className="space-y-4">
-          {/* Section Heading with Red Vertical Line */}
-          <h2 className="border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
+    <div className="space-y-10 mt-6">
+      {Object.entries(groupedComics).map(([seriesName, seriesComics]) => (
+        <div key={seriesName} className="space-y-3">
+          
+          {/* Series Heading */}
+          <h2 className="text-xl font-extrabold text-white tracking-wide border-l-4 border-red-600 pl-3">
             {seriesName}
           </h2>
-
-          {/* 🔥 FIXED GRID LAYOUT: Cards ab stretch nahi honge, balki standard grid mein sahi size par dikhenge 🔥 */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+          
+          {/* 🔥 HORIZONTAL SCROLLING ROWS (ComicsList style side-by-side compact cards) */}
+          <div className="flex overflow-x-auto gap-4 pb-4 pt-1 no-scrollbar scroll-smooth">
             {seriesComics.map((c, i) => (
-              <div key={c.id} className="w-full">
+              <div key={c.id} className="relative group w-[150px] sm:w-[180px] flex-shrink-0">
+                {/* Yellow Badge */}
+                <div className="absolute top-2 right-2 z-20 rounded bg-yellow-400 px-2 py-0.5 text-[10px] font-black uppercase text-black shadow-md">
+                  {c.publishStatus === "upcoming" ? "UPCOMING" : "RELEASED"}
+                </div>
+                
                 <VaultCard item={{ ...c, kind: "comic" }} index={i} />
               </div>
             ))}
           </div>
+
         </div>
       ))}
     </div>
