@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
@@ -22,13 +25,12 @@ jobs:
         with:
           node-version: 20
 
-      # 🔥 ISOLATED ENVIRONMENT: Clean folder banakar Capacitor 6 build hoga bina kisi clash ke
-      - name: Generate Clean Android Wrapper
+      - name: Generate Clean Android Wrapper With CCU Logo
         run: |
           mkdir /tmp/app-build
           cd /tmp/app-build
           npm init -y
-          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0
+          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0 @capacitor/assets@3.0.5
 
           cat << 'EOF' > capacitor.config.json
           {
@@ -49,12 +51,21 @@ jobs:
           mkdir public
           echo "<html><body>Loading CCU Studios...</body></html>" > public/index.html
 
+          # Official CCU Logo download karke assets folder mein setup karna
+          mkdir -p assets
+          curl -sL "https://ccu-studios.vercel.app/ccu-logo.png" -o assets/logo.png
+          cp assets/logo.png assets/icon-only.png
+          cp assets/logo.png assets/icon-foreground.png
+          cp assets/logo.png assets/icon-background.png
+          cp assets/logo.png assets/splash.png
+
           npx cap add android
 
-          # Fullscreen aur Network Permission configuration
+          # Logo ko sabhi Android screen resolutions (ic_launcher) par generate karna
+          npx capacitor-assets generate --android
+
+          # Fullscreen & Network settings
           sed -i '/<application/a \        android:usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml
-          
-          # Duplicate classes prevent karne ke liye flags
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.useAndroidX=true" >> android/gradle.properties
 
@@ -63,7 +74,6 @@ jobs:
           ./gradlew assembleDebug --no-daemon
           ./gradlew bundleDebug --no-daemon
 
-          # Artifacts ko workspace par copy karein
           mkdir -p $GITHUB_WORKSPACE/output
           cp app/build/outputs/apk/debug/app-debug.apk $GITHUB_WORKSPACE/output/CCU-Studios.apk
           cp app/build/outputs/bundle/debug/app-debug.aab $GITHUB_WORKSPACE/output/CCU-Studios.aab
