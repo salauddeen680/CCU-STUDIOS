@@ -7,11 +7,13 @@ import { GridSkeleton } from "./skeletons"
 
 export function UltimateList() {
   const { comics, loading } = useComics()
-  const ultimate = comics.filter((c) => c.ultimate)
+  
+  // Sirf wahi comics filter hongi jo Ultimate hain
+  const ultimateComics = comics.filter((c) => c.ultimate)
 
   if (loading) return <GridSkeleton count={4} />
 
-  if (ultimate.length === 0)
+  if (ultimateComics.length === 0)
     return (
       <div className="rounded-2xl border border-dashed border-gold/30 bg-card/50 py-16 text-center">
         <p className="font-display text-lg text-gold">No Ultimate chapters yet</p>
@@ -24,18 +26,34 @@ export function UltimateList() {
       </div>
     )
 
-  return (
-    <div className="mb-10">
-      {/* 🔥 EXACT SCREENSHOT WALA LAAL (RED) VERTICAL BORDER STYLE 🔥 */}
-      <h2 className="mb-4 border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
-        Ultimate Saga
-      </h2>
+  // 🔥 Comics ko unke series ya title ke hisaab se group (alag-alag sections mein) karna
+  const groupedBySeries: { [key: string] ctype[] } = {}
+  
+  ultimateComics.forEach((comic) => {
+    // Agar comic mein series ka naam hai toh use karein, warna title ya "Other" use karein
+    const seriesName = comic.series || comic.title.split(":")[0].trim() || "Ultimate Series"
+    if (!groupedBySeries[seriesName]) {
+      groupedBySeries[seriesName] = []
+    }
+    groupedBySeries[seriesName].push(comic)
+  })
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {ultimate.map((c, i) => (
-          <VaultCard key={c.id} item={{ ...c, kind: "comic" }} index={i} />
-        ))}
-      </div>
+  return (
+    <div className="space-y-10">
+      {Object.entries(groupedBySeries).map(([seriesName, seriesComics]) => (
+        <div key={seriesName}>
+          {/* 🔥 Har series ka alag section heading with red vertical border */}
+          <h2 className="mb-4 border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
+            {seriesName}
+          </h2>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {seriesComics.map((c, i) => (
+              <VaultCard key={c.id} item={{ ...c, kind: "comic" }} index={i} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
