@@ -25,7 +25,6 @@ export function UltimateList() {
       </div>
     )
 
-  // 🔥 FIX: 'ctype' hata kar yahan standard type use kiya hai jisse build error nahi aayega
   const groupedBySeries: { [key: string]: any[] } = {}
   
   ultimateComics.forEach((comic) => {
@@ -37,16 +36,20 @@ export function UltimateList() {
   })
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       {Object.entries(groupedBySeries).map(([seriesName, seriesComics]) => (
-        <div key={seriesName}>
-          <h2 className="mb-4 border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
+        <div key={seriesName} className="space-y-3">
+          {/* Section Heading */}
+          <h2 className="border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
             {seriesName}
           </h2>
 
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {/* 🔥 HORIZONTAL SCROLLING ROW (Netflix Style / Side-by-side scroll) 🔥 */}
+          <div className="flex gap-4 overflow-x-auto pb-4 pt-1 scrollbar-thin scrollbar-thumb-primary/50">
             {seriesComics.map((c, i) => (
-              <VaultCard key={c.id} item={{ ...c, kind: "comic" }} index={i} />
+              <div key={c.id} className="min-w-[150px] sm:min-w-[180px] md:min-w-[200px] flex-shrink-0">
+                <VaultCard item={{ ...c, kind: "comic" }} index={i} />
+              </div>
             ))}
           </div>
         </div>
