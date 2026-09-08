@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 🔥 FIX: Trailing slashes disable kar diye taaki duplicate URLs na banein
+  trailingSlash: false,
+  
   eslint: {
     ignoreDuringBuilds: true,
   },
