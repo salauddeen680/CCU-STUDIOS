@@ -1,0 +1,13 @@
+{
+  "appId": "com.ccustudios.app",
+  "appName": "CCU Studios",
+  "webDir": "public",
+  "bundledWebRuntime": false,
+  "server": {
+    "url": "https://ccu-studios.vercel.app",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
