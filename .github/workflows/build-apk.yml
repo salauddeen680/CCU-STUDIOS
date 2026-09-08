@@ -14,13 +14,16 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Setup Java JDK
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: 17
+          java-version: 21
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Install Capacitor Core
         run: |
@@ -29,6 +32,7 @@ jobs:
       - name: Initialize Android Native Project
         run: |
           npx cap add android
+          npx cap sync android
 
       - name: Update Permissions for Fullscreen Native App
         run: |
@@ -38,12 +42,12 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Build Release AAB (For Play Store & Amazon)
         run: |
           cd android
-          ./gradlew bundleRelease
+          ./gradlew bundleRelease --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -56,4 +60,3 @@ jobs:
         with:
           name: CCU-Studios-PlayStore-AAB
           path: android/app/build/outputs/bundle/release/app-release.aab
-
