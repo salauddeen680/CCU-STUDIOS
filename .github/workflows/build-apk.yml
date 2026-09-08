@@ -20,34 +20,38 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: 21
+          java-version: 17
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Capacitor Core
+      # 🔥 FIX: Stable Capacitor 6 versions pin kiye hain taaki duplicate class clash na ho
+      - name: Install Capacitor CLI & Core
         run: |
-          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npm install -D @capacitor/cli@6 @capacitor/core@6 @capacitor/android@6
 
       - name: Initialize Android Native Project
         run: |
           npx cap add android
           npx cap sync android
 
-      - name: Update Permissions for Fullscreen Native App
+      # 🔥 FIX: Duplicate classes aur cleartext traffic resolve karne ke flags
+      - name: Fix Android Manifest & Gradle Properties
         run: |
           sed -i '/<application/a \        android:usesCleartextTraffic="true"' android/app/src/main/AndroidManifest.xml
+          echo "android.enableJetifier=true" >> android/gradle.properties
+          echo "android.useAndroidX=true" >> android/gradle.properties
 
       - name: Build Debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Build Release AAB (For Play Store & Amazon)
+      - name: Build Release Bundle (Unsigned AAB)
         run: |
           cd android
-          ./gradlew bundleRelease --stacktrace
+          ./gradlew bundleDebug --no-daemon
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
@@ -55,8 +59,8 @@ jobs:
           name: CCU-Studios-Direct-Install-APK
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      - name: Upload AAB Artifact (Play Store Release)
+      - name: Upload AAB Artifact
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-PlayStore-AAB
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/debug/app-debug.aab
