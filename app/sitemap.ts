@@ -1,4 +1,4 @@
-import { MetadataRoute } from 'next'
+import { MetadataRoute } from 'next' // 🔥 FIX: Capital 'I' ko small 'i' kiya
 import { db } from '@/lib/firebase'
 import { collection, getDocs } from 'firebase/firestore'
 
@@ -15,7 +15,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ].map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date().toISOString(),
-    changeFrequency: route === '' ? ('daily' as const) : ('weekly' as const),
+    changeFrequency: route === '' ? 'daily' : 'weekly',
     priority: route === '' ? 1.0 : 0.8,
   }))
 
@@ -29,10 +29,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       comicRoutes = comicsSnapshot.docs.map((doc) => {
         const data = doc.data()
         const routeParam = data.slug || doc.id
+        
+        // 🔥 FIX: Firebase timestamp ko crash hone se bachane ke liye safe check
+        const lastMod = data.updatedAt?.toDate 
+          ? data.updatedAt.toDate().toISOString() 
+          : data.updatedAt 
+            ? new Date(data.updatedAt).toISOString() 
+            : new Date().toISOString()
+
         return {
           url: `${baseUrl}/comics/${routeParam}`,
-          lastModified: data.updatedAt ? new Date(data.updatedAt).toISOString() : new Date().toISOString(),
-          changeFrequency: 'weekly' as const,
+          lastModified: lastMod,
+          changeFrequency: 'weekly',
           priority: 0.8,
         }
       })
@@ -48,10 +56,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       characterRoutes = charactersSnapshot.docs.map((doc) => {
         const data = doc.data()
         const routeParam = data.slug || doc.id
+        
+        // 🔥 FIX: Firebase timestamp safety
+        const lastMod = data.updatedAt?.toDate 
+          ? data.updatedAt.toDate().toISOString() 
+          : data.updatedAt 
+            ? new Date(data.updatedAt).toISOString() 
+            : new Date().toISOString()
+
         return {
           url: `${baseUrl}/characters/${routeParam}`,
-          lastModified: data.updatedAt ? new Date(data.updatedAt).toISOString() : new Date().toISOString(),
-          changeFrequency: 'monthly' as const,
+          lastModified: lastMod,
+          changeFrequency: 'monthly',
           priority: 0.7,
         }
       })
