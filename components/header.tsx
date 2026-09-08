@@ -7,7 +7,6 @@ import { Search, Menu, X, BookOpen, Users, Sparkles, LogIn, LogOut, UserCircle }
 import { AnimatePresence, motion } from "framer-motion"
 import { useComics, useCharacters } from "@/lib/data"
 
-// 🔥 FIREBASE IMPORTS FOR LOGIN & DATABASE
 import { auth, db } from "@/lib/firebase" 
 import { signInWithPopup, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth"
 import { doc, getDoc, setDoc } from "firebase/firestore"
@@ -25,19 +24,16 @@ export function Header() {
   const [term, setTerm] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // 👤 FAN SESSION STATE
   const [user, setUser] = useState<User | null>(null)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
 
   const { comics } = useComics()
   const { characters } = useCharacters()
 
-  // 🔄 AUTH LISTENER: Website ko batayega ki fan logged in hai ya nahi
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser)
 
-      // Persistent Firestore Profile creation post-redirect / post-popup
       if (currentUser) {
         try {
           const userRef = doc(db, "users", currentUser.uid)
@@ -51,7 +47,6 @@ export function Header() {
               premiumExpiry: null,
               joinedAt: new Date().toISOString()
             })
-            console.log("New CCU Fan Profile Created!")
           }
         } catch (err) {
           console.error("Firestore sync error:", err)
@@ -61,35 +56,40 @@ export function Header() {
     return () => unsubscribe()
   }, [])
 
-  // 🚀 GOOGLE LOGIN WITH ACCOUNT CHOOSER & MOBILE FALLBACK
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return
     setIsLoggingIn(true)
+
     try {
       const provider = new GoogleAuthProvider()
-      
-      // 👑 Force Account List + User Confirmation Screen
       provider.setCustomParameters({
-        prompt: "select_account consent"
+        prompt: "select_account"
       })
 
-      try {
-        // First try popup
+      const isCapacitorApp = 
+        typeof window !== "undefined" && 
+        (Boolean((window as any).Capacitor) || navigator.userAgent.includes("wv"))
+
+      if (isCapacitorApp) {
         await signInWithPopup(auth, provider)
-      } catch (popupError: any) {
-        // Mobile browsers popup block case: Use direct redirect fallback
-        if (
-          popupError?.code === "auth/popup-blocked" || 
-          popupError?.code === "auth/popup-closed-by-user" ||
-          popupError?.code === "auth/cancelled-popup-request"
-        ) {
-          await signInWithRedirect(auth, provider)
-        } else {
-          throw popupError
+      } else {
+        try {
+          await signInWithPopup(auth, provider)
+        } catch (popupError: any) {
+          if (
+            popupError?.code === "auth/popup-blocked" || 
+            popupError?.code === "auth/cancelled-popup-request"
+          ) {
+            await signInWithRedirect(auth, provider)
+          } else {
+            throw popupError
+          }
         }
       }
-    } catch (error) {
-      console.error("Login failed:", error)
+    } catch (error: any) {
+      if (error?.code !== "auth/popup-closed-by-user") {
+        console.error("Login failed:", error)
+      }
     } finally {
       setIsLoggingIn(false)
     }
@@ -122,15 +122,16 @@ export function Header() {
   }, [pathname])
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-background/80 backdrop-blur-xl">
+    // 🔥 PREMIUM FROSTED GLASS EFFECT: Semi-transparent backdrop + heavy blur + subtle glass border
+    <header className="sticky top-0 z-50 border-b border-white/[0.08] bg-zinc-950/40 backdrop-blur-2xl supports-[backdrop-filter]:bg-zinc-950/30 transition-all">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4">
         
         {/* 🎬 CCU STUDIOS LOGO */}
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-sm font-black text-white shadow-glow">
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 text-xs font-black text-white shadow-[0_0_18px_rgba(220,38,38,0.5)] transition-transform group-hover:scale-105">
             CCU
           </span>
-          <span className="font-display text-lg font-extrabold tracking-wider uppercase text-white">
+          <span className="font-display text-lg font-black tracking-widest uppercase text-white drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">
             STUDIOS
           </span>
         </Link>
@@ -143,8 +144,10 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`rounded-lg px-3 py-2 text-sm font-medium transition hover:text-primary ${
-                  active ? "text-primary" : "text-foreground/80"
+                className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-all ${
+                  active 
+                    ? "bg-white/[0.08] text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] backdrop-blur-md" 
+                    : "text-zinc-300 hover:text-white hover:bg-white/[0.04]"
                 }`}
               >
                 {item.label}
@@ -156,26 +159,26 @@ export function Header() {
         {/* 🛠️ RIGHT CONTROLS: SEARCH + LOGIN + MOBILE MENU */}
         <div className="flex items-center gap-2">
           
-          {/* 🔍 Search Button */}
+          {/* 🔍 Search Glass Button */}
           <button
             onClick={() => setSearchOpen((s) => !s)}
             aria-label="Search"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-card text-foreground/80 transition hover:border-primary/50 hover:text-primary"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-300 backdrop-blur-md transition hover:border-red-500/50 hover:text-white hover:bg-white/[0.08]"
           >
             <Search className="h-4 w-4" />
           </button>
 
-          {/* 🔐 AUTH SYSTEM (Desktop & Mobile Header) */}
+          {/* 🔐 AUTH SYSTEM */}
           <div className="hidden sm:flex items-center">
             {user ? (
-              <div className="flex items-center gap-3 ml-2 border-l border-zinc-800 pl-4">
-                <span className="text-xs font-bold text-zinc-300 flex items-center gap-1">
-                  <UserCircle className="h-4 w-4 text-primary" />
+              <div className="flex items-center gap-3 ml-2 border-l border-white/10 pl-4">
+                <span className="text-xs font-bold text-zinc-300 flex items-center gap-1.5">
+                  <UserCircle className="h-4 w-4 text-red-500" />
                   {user.displayName?.split(" ")[0] || "Fan"}
                 </span>
                 <button
                   onClick={handleLogout}
-                  className="grid h-8 w-8 place-items-center rounded-lg bg-zinc-900 text-zinc-400 hover:text-red-500 hover:bg-zinc-800 transition border border-zinc-800"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/[0.03] text-zinc-400 hover:text-red-500 hover:bg-red-500/10 transition"
                   title="Logout"
                 >
                   <LogOut className="h-3.5 w-3.5" />
@@ -185,54 +188,54 @@ export function Header() {
               <button
                 onClick={handleGoogleLogin}
                 disabled={isLoggingIn}
-                className="ml-2 flex items-center gap-2 rounded-lg bg-white px-4 py-1.5 text-xs font-bold text-black hover:bg-zinc-200 transition-colors shadow-lg shadow-white/10"
+                className="ml-2 flex items-center gap-2 rounded-xl bg-white px-4 py-1.5 text-xs font-bold text-black hover:bg-zinc-200 transition shadow-[0_0_15px_rgba(255,255,255,0.2)]"
               >
                 {isLoggingIn ? "Connecting..." : "Login"} <LogIn className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
 
-          {/* 📱 Mobile Menu Hamburger */}
+          {/* 📱 Mobile Menu Hamburger (Glass style) */}
           <button
             onClick={() => setOpen((s) => !s)}
             aria-label="Menu"
-            className="grid h-9 w-9 place-items-center rounded-lg border border-border bg-card text-foreground/80 md:hidden"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-300 backdrop-blur-md transition hover:bg-white/[0.08] md:hidden"
           >
             {open ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
           </button>
         </div>
       </div>
 
-      {/* 🔍 LIVE SEARCH PANEL */}
+      {/* 🔍 LIVE SEARCH PANEL (Glass design) */}
       <AnimatePresence>
         {searchOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-border/70 bg-background/95"
+            className="overflow-hidden border-t border-white/10 bg-zinc-950/70 backdrop-blur-2xl"
           >
             <div className="mx-auto max-w-7xl px-4 py-3">
-              <div className="flex items-center gap-2 rounded-xl border border-border bg-card px-3">
-                <Search className="h-4 w-4 text-muted" />
+              <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3">
+                <Search className="h-4 w-4 text-zinc-400" />
                 <input
                   ref={inputRef}
                   value={term}
                   onChange={(e) => setTerm(e.target.value)}
                   placeholder="Search comics & characters..."
-                  className="h-11 w-full bg-transparent text-sm outline-none placeholder:text-muted"
+                  className="h-11 w-full bg-transparent text-sm text-white outline-none placeholder:text-zinc-500"
                 />
               </div>
               {term && (
-                <div className="mt-2 divide-y divide-border/60 overflow-hidden rounded-xl border border-border bg-card">
+                <div className="mt-2 divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/80 backdrop-blur-xl">
                   {results.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-muted">No results found.</p>
+                    <p className="px-4 py-3 text-sm text-zinc-400">No results found.</p>
                   ) : (
                     results.map((r) => (
                       <Link
                         key={`${r.type}-${r.id}`}
                         href={r.type === "comic" ? `/comics/${r.id}` : `/characters/${r.id}`}
-                        className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-primary/10"
+                        className="flex items-center gap-3 px-3 py-2.5 transition hover:bg-red-600/10"
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -240,8 +243,8 @@ export function Header() {
                           alt=""
                           className="h-10 w-10 rounded-md object-cover"
                         />
-                        <span className="flex-1 truncate text-sm">{r.label}</span>
-                        <span className="rounded-full bg-background px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted">
+                        <span className="flex-1 truncate text-sm text-zinc-200">{r.label}</span>
+                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-zinc-400">
                           {r.type}
                         </span>
                       </Link>
@@ -254,16 +257,16 @@ export function Header() {
         )}
       </AnimatePresence>
 
-      {/* 📱 MOBILE NAV MENU */}
+      {/* 📱 MOBILE NAV MENU (Glass drawer) */}
       <AnimatePresence>
         {open && (
           <motion.nav
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden border-t border-border/70 bg-background/95 md:hidden"
+            className="overflow-hidden border-t border-white/10 bg-zinc-950/80 backdrop-blur-2xl md:hidden"
           >
-            <div className="mx-auto flex max-w-7xl flex-col px-4 py-2">
+            <div className="mx-auto flex max-w-7xl flex-col px-4 py-3 space-y-1">
               {NAV.map((item) => {
                 const Icon = item.icon
                 const active = pathname.startsWith(item.href)
@@ -271,8 +274,8 @@ export function Header() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition ${
-                      active ? "bg-primary/10 text-primary" : "text-foreground/80"
+                    className={`flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-medium transition ${
+                      active ? "bg-red-600/15 text-red-500 border border-red-500/20" : "text-zinc-300 hover:bg-white/[0.04]"
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -281,12 +284,11 @@ export function Header() {
                 )
               })}
               
-              {/* Mobile Login/Logout Button */}
-              <div className="mt-2 border-t border-border/60 pt-2">
+              <div className="mt-2 border-t border-white/10 pt-2">
                 {user ? (
-                  <div className="flex items-center justify-between px-3 py-3">
-                    <span className="text-sm font-bold text-zinc-300 flex items-center gap-2">
-                      <UserCircle className="h-5 w-5 text-primary" />
+                  <div className="flex items-center justify-between px-3.5 py-3">
+                    <span className="text-sm font-bold text-zinc-200 flex items-center gap-2">
+                      <UserCircle className="h-5 w-5 text-red-500" />
                       {user.displayName}
                     </span>
                     <button onClick={handleLogout} className="text-xs font-bold text-red-500 hover:text-red-400 uppercase tracking-wider flex items-center gap-1">
@@ -297,13 +299,12 @@ export function Header() {
                   <button
                     onClick={handleGoogleLogin}
                     disabled={isLoggingIn}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-white px-4 py-3 text-sm font-bold text-black hover:bg-zinc-200 transition-colors"
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-bold text-black hover:bg-zinc-200 transition"
                   >
                     {isLoggingIn ? "Connecting..." : "Login to CCU"} <LogIn className="h-4 w-4" />
                   </button>
                 )}
               </div>
-
             </div>
           </motion.nav>
         )}
