@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata } from "next" // 🔥 FIX: Capital 'I' ko small 'i' kar diya
 import { SiteShell } from "@/components/site-shell"
 import { CharacterProfile } from "@/components/character-profile"
 
