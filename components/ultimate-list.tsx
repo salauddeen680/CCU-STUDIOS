@@ -25,10 +25,17 @@ export function UltimateList() {
     )
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-      {ultimate.map((c, i) => (
-        <VaultCard key={c.id} item={{ ...c, kind: "comic" }} index={i} />
-      ))}
+    <div className="mb-10">
+      {/* 🔥 EXACT SCREENSHOT WALA LAAL (RED) VERTICAL BORDER STYLE 🔥 */}
+      <h2 className="mb-4 border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
+        Ultimate Saga
+      </h2>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {ultimate.map((c, i) => (
+          <VaultCard key={c.id} item={{ ...c, kind: "comic" }} index={i} />
+        ))}
+      </div>
     </div>
   )
 }
