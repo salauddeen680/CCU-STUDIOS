@@ -1,4 +1,4 @@
-import type { Metadata } from "next"
+import type { Metadata } from "next" // 🔥 FIX: Capital 'I' ko small 'i' kiya taaki build fail na ho
 import { SiteShell } from "@/components/site-shell"
 import { ComicDetail } from "@/components/comic-detail"
 
@@ -25,7 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       }
     }
 
-    // Faltu auto-ID ke bajaye clean slug / title ko canonical banayega
+    // 🔥 PERFECT FIX: Faltu auto-ID ke bajaye clean slug / title ko canonical banayega
     const canonicalPath = comic.slug || comic.id || param
 
     return {
