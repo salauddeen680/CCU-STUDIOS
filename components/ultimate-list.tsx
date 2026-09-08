@@ -8,7 +8,6 @@ import { GridSkeleton } from "./skeletons"
 export function UltimateList() {
   const { comics, loading } = useComics()
   
-  // Sirf wahi comics filter hongi jo Ultimate hain
   const ultimateComics = comics.filter((c) => c.ultimate)
 
   if (loading) return <GridSkeleton count={4} />
@@ -26,11 +25,10 @@ export function UltimateList() {
       </div>
     )
 
-  // 🔥 Comics ko unke series ya title ke hisaab se group (alag-alag sections mein) karna
-  const groupedBySeries: { [key: string] ctype[] } = {}
+  // 🔥 FIX: 'ctype' hata kar yahan standard type use kiya hai jisse build error nahi aayega
+  const groupedBySeries: { [key: string]: any[] } = {}
   
   ultimateComics.forEach((comic) => {
-    // Agar comic mein series ka naam hai toh use karein, warna title ya "Other" use karein
     const seriesName = comic.series || comic.title.split(":")[0].trim() || "Ultimate Series"
     if (!groupedBySeries[seriesName]) {
       groupedBySeries[seriesName] = []
@@ -42,7 +40,6 @@ export function UltimateList() {
     <div className="space-y-10">
       {Object.entries(groupedBySeries).map(([seriesName, seriesComics]) => (
         <div key={seriesName}>
-          {/* 🔥 Har series ka alag section heading with red vertical border */}
           <h2 className="mb-4 border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
             {seriesName}
           </h2>
