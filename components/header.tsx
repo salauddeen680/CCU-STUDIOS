@@ -7,7 +7,6 @@ import { Search, Menu, X, BookOpen, Users, Sparkles, LogIn, LogOut, UserCircle }
 import { AnimatePresence, motion } from "framer-motion"
 import { useComics, useCharacters } from "@/lib/data"
 
-// 🔥 FIREBASE IMPORTS
 import { auth, db } from "@/lib/firebase" 
 import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth"
 import { doc, getDoc, setDoc } from "firebase/firestore"
@@ -57,7 +56,7 @@ export function Header() {
     return () => unsubscribe()
   }, [])
 
-  // 🚀 FIXED LOGIN: No external redirect (stops "missing initial state" error completely)
+  // 🚀 NATIVE-SAFE LOGIN FLOW
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return
     setIsLoggingIn(true)
@@ -67,11 +66,12 @@ export function Header() {
       provider.setCustomParameters({
         prompt: "select_account"
       })
+
       await signInWithPopup(auth, provider)
     } catch (error: any) {
       if (error?.code !== "auth/popup-closed-by-user") {
         console.error("Login failed:", error)
-        alert("Login failed: " + (error?.message || "Please check connection"))
+        alert(error?.message || "Login failed. Please check internet connection.")
       }
     } finally {
       setIsLoggingIn(false)
@@ -106,11 +106,9 @@ export function Header() {
 
   return (
     <>
-      {/* 🔥 PURE GLASS HEADER (Fixed top over content + high blur + clear glass background) */}
       <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/10 bg-black/25 backdrop-blur-xl supports-[backdrop-filter]:bg-black/20 transition-all shadow-[0_4px_30px_rgba(0,0,0,0.3)]">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4">
           
-          {/* 🎬 CCU STUDIOS LOGO */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 text-xs font-black text-white shadow-[0_0_20px_rgba(220,38,38,0.6)]">
               CCU
@@ -120,7 +118,6 @@ export function Header() {
             </span>
           </Link>
 
-          {/* 💻 DESKTOP NAV */}
           <nav className="hidden items-center gap-1 md:flex">
             {NAV.map((item) => {
               const active = pathname.startsWith(item.href)
@@ -140,7 +137,6 @@ export function Header() {
             })}
           </nav>
 
-          {/* 🛠️ CONTROLS */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen((s) => !s)}
@@ -186,7 +182,6 @@ export function Header() {
           </div>
         </div>
 
-        {/* 🔍 SEARCH PANEL */}
         <AnimatePresence>
           {searchOpen && (
             <motion.div
@@ -236,7 +231,6 @@ export function Header() {
           )}
         </AnimatePresence>
 
-        {/* 📱 MOBILE NAV MENU */}
         <AnimatePresence>
           {open && (
             <motion.nav
@@ -290,7 +284,6 @@ export function Header() {
         </AnimatePresence>
       </header>
 
-      {/* Spacer taaki content header ke niche na chupe */}
       <div className="h-16 w-full" />
     </>
   )
