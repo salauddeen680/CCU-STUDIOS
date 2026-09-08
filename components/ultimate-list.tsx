@@ -36,18 +36,18 @@ export function UltimateList() {
   })
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {Object.entries(groupedBySeries).map(([seriesName, seriesComics]) => (
-        <div key={seriesName} className="space-y-3">
-          {/* Section Heading */}
+        <div key={seriesName} className="space-y-4">
+          {/* Section Heading with Red Vertical Line */}
           <h2 className="border-l-4 border-primary pl-3 font-display text-lg font-bold uppercase tracking-wider text-white">
             {seriesName}
           </h2>
 
-          {/* 🔥 HORIZONTAL SCROLLING ROW (Netflix Style / Side-by-side scroll) 🔥 */}
-          <div className="flex gap-4 overflow-x-auto pb-4 pt-1 scrollbar-thin scrollbar-thumb-primary/50">
+          {/* 🔥 FIXED GRID LAYOUT: Cards ab stretch nahi honge, balki standard grid mein sahi size par dikhenge 🔥 */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {seriesComics.map((c, i) => (
-              <div key={c.id} className="min-w-[150px] sm:min-w-[180px] md:min-w-[200px] flex-shrink-0">
+              <div key={c.id} className="w-full">
                 <VaultCard item={{ ...c, kind: "comic" }} index={i} />
               </div>
             ))}
