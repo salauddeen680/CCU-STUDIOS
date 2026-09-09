@@ -15,15 +15,22 @@ import {
   LogOut, 
   UserCircle 
 } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
 import { auth } from "@/lib/firebase"
 import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth"
 
 export function Header() {
   const pathname = usePathname()
-  const { user } = useAuth()
+  const [user, setUser] = useState<any>(auth.currentUser)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
+
+  // Track auth state directly without missing context
+  useState(() => {
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+      setUser(u)
+    })
+    return () => unsubscribe()
+  })
 
   const navLinks = [
     { name: "Comics", href: "/comics", icon: BookOpen },
@@ -36,7 +43,6 @@ export function Header() {
     setIsLoggingIn(true)
     try {
       const provider = new GoogleAuthProvider()
-      // 🔥 Forces Google to open registered email ID accounts list popup
       provider.setCustomParameters({
         prompt: "select_account",
       })
@@ -66,10 +72,8 @@ export function Header() {
         {/* 🔴 GOL (ROUND) CCU LOGO WITH RED AURA GLOW */}
         <Link href="/" className="group flex items-center gap-3.5 focus:outline-none">
           <div className="relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 transition-transform duration-300 group-hover:scale-105">
-            {/* Ambient Red Glow */}
             <div className="absolute -inset-1 rounded-full bg-red-600 opacity-70 blur-md group-hover:opacity-100 transition-opacity duration-300" />
             
-            {/* Circular Image Container */}
             <div className="relative h-full w-full overflow-hidden rounded-full border-2 border-red-500/80 shadow-[0_0_15px_rgba(220,38,38,0.5)] bg-red-600">
               <Image
                 src="/ccu-logo.png"
@@ -120,12 +124,10 @@ export function Header() {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-md">
                 {user.photoURL ? (
-                  <Image
+                  <img
                     src={user.photoURL}
                     alt={user.displayName || "User"}
-                    width={24}
-                    height={24}
-                    className="rounded-full ring-1 ring-red-500/50"
+                    className="h-6 w-6 rounded-full ring-1 ring-red-500/50 object-cover"
                   />
                 ) : (
                   <UserCircle className="h-5 w-5 text-zinc-400" />
@@ -202,12 +204,10 @@ export function Header() {
                   <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-3">
                       {user.photoURL ? (
-                        <Image
+                        <img
                           src={user.photoURL}
                           alt="User"
-                          width={32}
-                          height={32}
-                          className="rounded-full"
+                          className="h-8 w-8 rounded-full object-cover"
                         />
                       ) : (
                         <UserCircle className="h-8 w-8 text-zinc-400" />
