@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
+import Image from "next/image"
+import Head from "next/head"
 import { AnimatePresence, motion } from "framer-motion"
 import {
   X,
@@ -14,7 +16,7 @@ type Props = {
   title: string
   pages: string[]
   isPaid?: boolean
-  freePages?: number // 👑 Dynamic free preview pages (0 = Full Paid, 9 = Teaser, etc.)
+  freePages?: number
 }
 
 export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }: Props) {
@@ -24,9 +26,6 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
   const [isPremium, setIsPremium] = useState(false)
 
   const total = pages.length
-  
-  // 👑 Dynamic Paywall trigger:
-  // Agar Paid hai aur Premium nahi hai, toh tab Paywall dikhayega jab current page free limit cross kare.
   const showPaywall = isPaid && !isPremium && index >= freePages
 
   const initiatePayment = async (amount: number) => {
@@ -50,7 +49,7 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
         order_id: data.orderId,
         name: "CCU Studios",
         description: amount === 19 ? "Single Issue Access" : "VIP Monthly Membership",
-        handler: function (response: any) {
+        handler: function () {
           setIsPremium(true);
           alert("Payment Successful! Access Unlocked.");
         },
@@ -76,7 +75,6 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
   const next = useCallback(() => go(1), [go])
   const prev = useCallback(() => go(-1), [go])
 
-  // Keyboard navigation
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (showPaywall && ((e.key === "ArrowRight" && !rtl) || (e.key === "ArrowLeft" && rtl))) return
@@ -87,17 +85,6 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [rtl, next, prev, showPaywall])
-
-  // Image preloading
-  useEffect(() => {
-    const preload = (i: number) => {
-      if (i < 0 || i >= total) return
-      const img = new Image()
-      img.src = pages[i]
-    }
-    preload(index + 1)
-    preload(index - 1)
-  }, [index, pages, total])
 
   const progress = useMemo(() => (total ? ((index + 1) / total) * 100 : 0), [index, total])
 
@@ -112,7 +99,27 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
 
   return (
     <div className="relative h-screen w-full select-none overflow-hidden bg-black">
-      {/* Tap Overlay Screen Area */}
+      {/* 🚀 SMART PRELOADING: Next 2 pages cached in advance */}
+      <div className="hidden" aria-hidden="true">
+        {pages[index + 1] && (
+          <Image
+            src={pages[index + 1]}
+            alt="preloading next page"
+            width={1200}
+            height={1800}
+            priority
+          />
+        )}
+        {pages[index + 2] && (
+          <Image
+            src={pages[index + 2]}
+            alt="preloading future page"
+            width={1200}
+            height={1800}
+          />
+        )}
+      </div>
+
       <div className="relative h-full w-full" onClick={() => setChrome((c) => !c)}>
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
@@ -120,7 +127,7 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
             initial={{ opacity: 0, x: rtl ? -40 : 40 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: rtl ? 40 : -40 }}
-            transition={{ duration: 0.28, ease: "easeOut" }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
             drag={showPaywall ? false : "x"}
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.2}
@@ -132,15 +139,21 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
             }}
             className="absolute inset-0 flex items-center justify-center p-0"
           >
-            <img
-              src={pages[index] || "/placeholder.svg"}
-              alt={`${title} — page ${index + 1}`}
-              loading="eager"
-              className={`h-full w-full object-contain transition-all duration-500 ${
-                showPaywall ? "blur-xl opacity-30 scale-105" : ""
-              }`}
-              draggable={false}
-            />
+            {/* 🔥 NEXT.JS ULTRA-COMPRESSED WEBP PAGE */}
+            <div className="relative h-full w-full">
+              <Image
+                src={pages[index] || "/placeholder.svg"}
+                alt={`${title} — page ${index + 1}`}
+                fill
+                priority
+                quality={85}
+                sizes="100vw"
+                draggable={false}
+                className={`object-contain transition-all duration-300 ${
+                  showPaywall ? "blur-xl opacity-30 scale-105" : ""
+                }`}
+              />
+            </div>
           </motion.div>
         </AnimatePresence>
 
@@ -194,7 +207,7 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
       {/* Top Header Bar */}
       <AnimatePresence>
         {chrome && (
-          <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="glass-strong absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-3 px-4 py-3 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
+          <motion.div initial={{ y: -60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="absolute inset-x-0 top-0 z-50 flex items-center justify-between gap-3 px-4 py-3 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800">
             <Link href="/comics" className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-900/80 text-white hover:text-red-400 transition-colors border border-zinc-800">
               <X className="h-4 w-4" />
             </Link>
@@ -206,10 +219,10 @@ export function ComicReader({ title, pages = [], isPaid = false, freePages = 0 }
         )}
       </AnimatePresence>
 
-      {/* Bottom Progress Bar (Clean Page Counter without Next/Prev buttons) */}
+      {/* Bottom Progress Bar */}
       <AnimatePresence>
         {chrome && (
-          <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -60, opacity: 0 }} className="glass-strong absolute inset-x-0 bottom-0 z-50 px-4 py-3 bg-zinc-950/80 backdrop-blur-md border-t border-zinc-800">
+          <motion.div initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }} className="absolute inset-x-0 bottom-0 z-50 px-4 py-3 bg-zinc-950/80 backdrop-blur-md border-t border-zinc-800">
             <div className="mb-2 h-1 w-full overflow-hidden rounded-full bg-zinc-800">
               <div className="h-full bg-red-600 transition-all duration-300" style={{ width: `${progress}%` }} />
             </div>
