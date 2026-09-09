@@ -36,6 +36,7 @@ export function Header() {
     setIsLoggingIn(true)
     try {
       const provider = new GoogleAuthProvider()
+      // 🔥 Forces Google to open registered email ID accounts list popup
       provider.setCustomParameters({
         prompt: "select_account",
       })
@@ -59,37 +60,40 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 shadow-[0_4px_30px_rgba(0,0,0,0.7)]">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
-        {/* 🔥 OFFICIAL SQUARE CCU MARVEL-STYLE LOGO */}
+        {/* 🔴 GOL (ROUND) CCU LOGO WITH RED AURA GLOW */}
         <Link href="/" className="group flex items-center gap-3.5 focus:outline-none">
           <div className="relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 transition-transform duration-300 group-hover:scale-105">
-            {/* Cinematic Red Ambient Glow */}
-            <div className="absolute -inset-1 rounded-xl bg-red-600 opacity-70 blur-md group-hover:opacity-100 transition-opacity duration-300" />
+            {/* Ambient Red Glow */}
+            <div className="absolute -inset-1 rounded-full bg-red-600 opacity-70 blur-md group-hover:opacity-100 transition-opacity duration-300" />
             
-            <Image
-              src="/ccu-logo.png"
-              alt="CCU Logo"
-              fill
-              priority
-              className="relative rounded-lg object-contain border border-red-500/50 shadow-2xl"
-              sizes="64px"
-            />
+            {/* Circular Image Container */}
+            <div className="relative h-full w-full overflow-hidden rounded-full border-2 border-red-500/80 shadow-[0_0_15px_rgba(220,38,38,0.5)] bg-red-600">
+              <Image
+                src="/ccu-logo.png"
+                alt="CCU Studios Logo"
+                fill
+                priority
+                className="object-cover scale-110"
+                sizes="64px"
+              />
+            </div>
           </div>
 
           <div className="flex flex-col">
-            <span className="font-display text-xl sm:text-2xl font-black tracking-wider text-white uppercase drop-shadow-[0_2px_12px_rgba(220,38,38,0.4)]">
+            <span className="font-display text-xl sm:text-2xl font-black tracking-wider text-white uppercase drop-shadow-[0_2px_12px_rgba(220,38,38,0.5)]">
               CCU <span className="text-red-500">STUDIOS</span>
             </span>
-            <span className="text-[10px] tracking-[0.25em] text-zinc-400 font-bold uppercase -mt-1 hidden sm:block">
-              Cosmic Cinematic Universe
+            <span className="text-[10px] tracking-[0.28em] text-zinc-400 font-bold uppercase -mt-1 hidden sm:block">
+              Cosmic Universe
             </span>
           </div>
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 rounded-full border border-white/10 bg-zinc-900/40 px-3 py-1.5 backdrop-blur-md">
+        <nav className="hidden md:flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-md">
           {navLinks.map((link) => {
             const Icon = link.icon
             const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
@@ -99,8 +103,8 @@ export function Header() {
                 href={link.href}
                 className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
                   isActive
-                    ? "bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.5)]"
-                    : "text-zinc-300 hover:text-white hover:bg-white/5"
+                    ? "bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.6)]"
+                    : "text-zinc-300 hover:text-white hover:bg-white/10"
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -110,11 +114,11 @@ export function Header() {
           })}
         </nav>
 
-        {/* Auth / Profile Area */}
+        {/* User Auth Section */}
         <div className="hidden md:flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-950/60 px-3 py-1.5 backdrop-blur">
+              <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-md">
                 {user.photoURL ? (
                   <Image
                     src={user.photoURL}
@@ -133,7 +137,7 @@ export function Header() {
               <button
                 onClick={handleLogout}
                 title="Logout"
-                className="grid h-9 w-9 place-items-center rounded-full border border-zinc-800 bg-zinc-900/60 text-zinc-400 hover:text-red-500 hover:border-red-500/50 transition-colors"
+                className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/5 text-zinc-400 hover:text-red-500 hover:border-red-500/50 transition-colors"
               >
                 <LogOut className="h-4 w-4" />
               </button>
@@ -142,7 +146,7 @@ export function Header() {
             <button
               onClick={handleGoogleLogin}
               disabled={isLoggingIn}
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-700 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all hover:scale-105 hover:brightness-110 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.5)] transition-all hover:scale-105 hover:bg-red-500 active:scale-95 disabled:opacity-50"
             >
               <LogIn className="h-4 w-4" />
               {isLoggingIn ? "Connecting..." : "Sign In"}
@@ -150,11 +154,11 @@ export function Header() {
           )}
         </div>
 
-        {/* Mobile Hamburger Toggle */}
+        {/* Mobile Hamburger Button */}
         <div className="flex items-center gap-2 md:hidden">
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-zinc-900/50 text-white backdrop-blur focus:outline-none"
+            className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/5 text-white backdrop-blur focus:outline-none"
             aria-label="Toggle Menu"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -170,7 +174,7 @@ export function Header() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-b border-white/10 bg-black/90 backdrop-blur-2xl px-4 py-5 md:hidden"
+            className="border-b border-white/10 bg-black/85 backdrop-blur-2xl px-4 py-5 md:hidden"
           >
             <div className="flex flex-col gap-2">
               {navLinks.map((link) => {
@@ -183,8 +187,8 @@ export function Header() {
                     onClick={() => setMobileMenuOpen(false)}
                     className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wider ${
                       isActive
-                        ? "bg-red-600 text-white shadow-lg shadow-red-600/30"
-                        : "text-zinc-300 hover:bg-zinc-800/60 hover:text-white"
+                        ? "bg-red-600 text-white shadow-lg shadow-red-600/40"
+                        : "text-zinc-300 hover:bg-white/5 hover:text-white"
                     }`}
                   >
                     <Icon className="h-5 w-5" />
@@ -193,7 +197,7 @@ export function Header() {
                 )
               })}
 
-              <div className="mt-3 pt-3 border-t border-zinc-800">
+              <div className="mt-3 pt-3 border-t border-white/10">
                 {user ? (
                   <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-3">
@@ -229,7 +233,7 @@ export function Header() {
                       handleGoogleLogin()
                     }}
                     disabled={isLoggingIn}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-sm font-bold uppercase text-white shadow-lg shadow-red-600/30"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-sm font-bold uppercase text-white shadow-lg shadow-red-600/40"
                   >
                     <LogIn className="h-4 w-4" />
                     {isLoggingIn ? "Connecting..." : "Sign In With Google"}
