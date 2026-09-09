@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
@@ -13,29 +13,29 @@ import {
   X, 
   LogIn, 
   LogOut, 
-  UserCircle 
+  UserCircle,
+  Search
 } from "lucide-react"
 import { auth } from "@/lib/firebase"
-import { GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth"
+import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth"
 
 export function Header() {
   const pathname = usePathname()
-  const [user, setUser] = useState<any>(auth.currentUser)
+  const [user, setUser] = useState<User | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
 
-  // Track auth state directly without missing context
-  useState(() => {
-    const unsubscribe = auth.onAuthStateChanged((u) => {
-      setUser(u)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
     })
     return () => unsubscribe()
-  })
+  }, [])
 
   const navLinks = [
     { name: "Comics", href: "/comics", icon: BookOpen },
     { name: "Characters", href: "/characters", icon: Users },
-    { name: "Ultimate", href: "/ultimate", icon: Sparkles },
+    { name: "Ultimate Comic", href: "/ultimate", icon: Sparkles },
   ]
 
   const handleGoogleLogin = async () => {
@@ -66,101 +66,99 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.4)]">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/30 backdrop-blur-2xl transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         
-        {/* 🔴 GOL (ROUND) CCU LOGO WITH RED AURA GLOW */}
-        <Link href="/" className="group flex items-center gap-3.5 focus:outline-none">
-          <div className="relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 transition-transform duration-300 group-hover:scale-105">
-            <div className="absolute -inset-1 rounded-full bg-red-600 opacity-70 blur-md group-hover:opacity-100 transition-opacity duration-300" />
-            
-            <div className="relative h-full w-full overflow-hidden rounded-full border-2 border-red-500/80 shadow-[0_0_15px_rgba(220,38,38,0.5)] bg-red-600">
-              <Image
-                src="/ccu-logo.png"
-                alt="CCU Studios Logo"
-                fill
-                priority
-                className="object-cover scale-110"
-                sizes="64px"
-              />
-            </div>
+        {/* 🎬 ORIGINAL MARVEL BADGE STYLE LOGO */}
+        <Link href="/" className="flex items-center gap-2.5 focus:outline-none group">
+          <div className="relative h-8 w-11 sm:h-9 sm:w-12 shrink-0 overflow-hidden rounded-md border border-red-500/50 shadow-[0_0_12px_rgba(220,38,38,0.4)]">
+            <Image
+              src="/ccu-logo.png"
+              alt="CCU"
+              fill
+              priority
+              className="object-cover"
+              sizes="48px"
+            />
           </div>
-
-          <div className="flex flex-col">
-            <span className="font-display text-xl sm:text-2xl font-black tracking-wider text-white uppercase drop-shadow-[0_2px_12px_rgba(220,38,38,0.5)]">
-              CCU <span className="text-red-500">STUDIOS</span>
-            </span>
-            <span className="text-[10px] tracking-[0.28em] text-zinc-400 font-bold uppercase -mt-1 hidden sm:block">
-              Cosmic Universe
-            </span>
-          </div>
+          <span className="font-display text-xl sm:text-2xl font-black tracking-wider text-white uppercase">
+            STUDIOS
+          </span>
         </Link>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-1 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-md">
+        {/* Desktop Nav */}
+        <nav className="hidden md:flex items-center gap-6">
           {navLinks.map((link) => {
-            const Icon = link.icon
             const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
             return (
               <Link
                 key={link.name}
                 href={link.href}
-                className={`relative flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                  isActive
-                    ? "bg-red-600 text-white shadow-[0_0_20px_rgba(220,38,38,0.6)]"
-                    : "text-zinc-300 hover:text-white hover:bg-white/10"
+                className={`font-display text-xs font-bold uppercase tracking-widest transition-colors ${
+                  isActive ? "text-red-500" : "text-zinc-300 hover:text-white"
                 }`}
               >
-                <Icon className="h-4 w-4" />
                 {link.name}
               </Link>
             )
           })}
         </nav>
 
-        {/* User Auth Section */}
+        {/* Right Section: Desktop Auth & Search */}
         <div className="hidden md:flex items-center gap-3">
+          <Link 
+            href="/comics"
+            className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-colors"
+          >
+            <Search className="h-4 w-4" />
+          </Link>
+
           {user ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 backdrop-blur-md">
                 {user.photoURL ? (
                   <img
                     src={user.photoURL}
                     alt={user.displayName || "User"}
-                    className="h-6 w-6 rounded-full ring-1 ring-red-500/50 object-cover"
+                    className="h-5 w-5 rounded-full object-cover"
                   />
                 ) : (
-                  <UserCircle className="h-5 w-5 text-zinc-400" />
+                  <UserCircle className="h-4 w-4 text-zinc-400" />
                 )}
                 <span className="text-xs font-bold text-zinc-200 max-w-[100px] truncate">
-                  {user.displayName?.split(" ")[0] || "Member"}
+                  {user.displayName?.split(" ")[0] || "User"}
                 </span>
               </div>
               <button
                 onClick={handleLogout}
-                title="Logout"
-                className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/5 text-zinc-400 hover:text-red-500 hover:border-red-500/50 transition-colors"
+                className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 hover:text-red-500 transition-colors"
               >
-                <LogOut className="h-4 w-4" />
+                <LogOut className="h-3.5 w-3.5" />
               </button>
             </div>
           ) : (
             <button
               onClick={handleGoogleLogin}
               disabled={isLoggingIn}
-              className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.5)] transition-all hover:scale-105 hover:bg-red-500 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(220,38,38,0.4)] transition hover:bg-red-500 active:scale-95 disabled:opacity-50"
             >
-              <LogIn className="h-4 w-4" />
-              {isLoggingIn ? "Connecting..." : "Sign In"}
+              <LogIn className="h-3.5 w-3.5" />
+              {isLoggingIn ? "Connecting..." : "Login to CCU"}
             </button>
           )}
         </div>
 
-        {/* Mobile Hamburger Button */}
+        {/* Mobile Buttons */}
         <div className="flex items-center gap-2 md:hidden">
+          <Link 
+            href="/comics"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-zinc-300"
+          >
+            <Search className="h-4 w-4" />
+          </Link>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="grid h-11 w-11 place-items-center rounded-xl border border-white/10 bg-white/5 text-white backdrop-blur focus:outline-none"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white backdrop-blur focus:outline-none"
             aria-label="Toggle Menu"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -169,16 +167,16 @@ export function Header() {
 
       </div>
 
-      {/* Mobile Glass Dropdown Menu */}
+      {/* 📱 MOBILE MENU: SCREENSHOT JAISE EXACT FONT & CLEAN FROSTED GLASS */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="border-b border-white/10 bg-black/85 backdrop-blur-2xl px-4 py-5 md:hidden"
+            className="border-b border-white/10 bg-black/80 backdrop-blur-3xl px-6 py-6 md:hidden"
           >
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-5">
               {navLinks.map((link) => {
                 const Icon = link.icon
                 const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
@@ -187,10 +185,8 @@ export function Header() {
                     key={link.name}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold uppercase tracking-wider ${
-                      isActive
-                        ? "bg-red-600 text-white shadow-lg shadow-red-600/40"
-                        : "text-zinc-300 hover:bg-white/5 hover:text-white"
+                    className={`flex items-center gap-3.5 font-display text-base font-bold uppercase tracking-wider ${
+                      isActive ? "text-red-500" : "text-zinc-200"
                     }`}
                   >
                     <Icon className="h-5 w-5" />
@@ -199,9 +195,9 @@ export function Header() {
                 )
               })}
 
-              <div className="mt-3 pt-3 border-t border-white/10">
+              <div className="pt-4 border-t border-white/10">
                 {user ? (
-                  <div className="flex items-center justify-between px-2">
+                  <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       {user.photoURL ? (
                         <img
@@ -213,15 +209,15 @@ export function Header() {
                         <UserCircle className="h-8 w-8 text-zinc-400" />
                       )}
                       <div>
-                        <p className="text-sm font-bold text-white leading-tight">
-                          {user.displayName || "Member"}
+                        <p className="text-sm font-bold text-white leading-none">
+                          {user.displayName || "User"}
                         </p>
-                        <p className="text-xs text-zinc-500">{user.email}</p>
+                        <p className="text-xs text-zinc-500 mt-1">{user.email}</p>
                       </div>
                     </div>
                     <button
                       onClick={handleLogout}
-                      className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-zinc-800"
+                      className="rounded-lg bg-zinc-900 border border-white/10 px-3 py-1.5 text-xs font-bold text-red-500 hover:bg-zinc-800"
                     >
                       Logout
                     </button>
@@ -233,7 +229,7 @@ export function Header() {
                       handleGoogleLogin()
                     }}
                     disabled={isLoggingIn}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 text-sm font-bold uppercase text-white shadow-lg shadow-red-600/40"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 font-display text-sm font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] active:scale-95"
                   >
                     <LogIn className="h-4 w-4" />
                     {isLoggingIn ? "Connecting..." : "Sign In With Google"}
