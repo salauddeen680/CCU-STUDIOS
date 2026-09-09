@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { useComics, useCharacters } from "@/lib/data"
 
 import { auth, db } from "@/lib/firebase" 
-import { signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth"
+import { signInWithPopup, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut, User } from "firebase/auth"
 import { doc, getDoc, setDoc } from "firebase/firestore"
 
 const NAV = [
@@ -56,15 +56,10 @@ export function Header() {
     return () => unsubscribe()
   }, [])
 
-  // 🚀 FIXED AUTH HANDLER (With timeout so it never gets stuck on "Connecting...")
+  // 🚀 FIXED AUTH FLOW
   const handleGoogleLogin = async () => {
     if (isLoggingIn) return
     setIsLoggingIn(true)
-
-    // Fallback timer: agar popup 12 sec mein respond na kare to button wapas normal ho jaye
-    const timeout = setTimeout(() => {
-      setIsLoggingIn(false)
-    }, 12000)
 
     try {
       const provider = new GoogleAuthProvider()
@@ -73,12 +68,17 @@ export function Header() {
       })
       await signInWithPopup(auth, provider)
     } catch (error: any) {
-      if (error?.code !== "auth/popup-closed-by-user") {
-        console.error("Login failed:", error)
-        alert(error?.message || "Login timed out. Please try again.")
+      // WebView popup block hone par direct fallback
+      if (error?.code === "auth/popup-blocked" || error?.code === "auth/operation-not-supported-in-this-environment") {
+        try {
+          await signInWithRedirect(auth, new GoogleAuthProvider())
+        } catch (redirErr) {
+          console.error("Redirect fallback error:", redirErr)
+        }
+      } else if (error?.code !== "auth/popup-closed-by-user") {
+        alert(error?.message || "Login unavailable right now.")
       }
     } finally {
-      clearTimeout(timeout)
       setIsLoggingIn(false)
     }
   }
@@ -111,21 +111,19 @@ export function Header() {
 
   return (
     <>
-      {/* 🔥 STABLE GLASS HEADER: Solid Blur + Dark Tint (Will never break or overlap content) */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-zinc-950/85 backdrop-blur-xl shadow-2xl transition-all">
+      {/* 🔥 100% PURE GLASSMORPHIC HEADER: Seamless transparency blending into the red glow */}
+      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.08] bg-black/15 backdrop-blur-xl transition-all shadow-[0_4px_30px_rgba(0,0,0,0.15)]">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-3 px-4">
           
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 text-xs font-black text-white shadow-[0_0_20px_rgba(220,38,38,0.5)]">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-red-600 to-red-700 text-xs font-black text-white shadow-[0_0_20px_rgba(220,38,38,0.6)]">
               CCU
             </span>
-            <span className="font-display text-lg font-black tracking-widest uppercase text-white">
+            <span className="font-display text-lg font-black tracking-widest uppercase text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
               STUDIOS
             </span>
           </Link>
 
-          {/* Desktop Nav */}
           <nav className="hidden items-center gap-1 md:flex">
             {NAV.map((item) => {
               const active = pathname.startsWith(item.href)
@@ -135,7 +133,7 @@ export function Header() {
                   href={item.href}
                   className={`rounded-xl px-3.5 py-2 text-sm font-medium transition-all ${
                     active 
-                      ? "bg-white/10 text-primary shadow-sm" 
+                      ? "bg-white/10 text-primary shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] backdrop-blur-md" 
                       : "text-zinc-300 hover:text-white hover:bg-white/5"
                   }`}
                 >
@@ -145,7 +143,6 @@ export function Header() {
             })}
           </nav>
 
-          {/* Controls */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen((s) => !s)}
@@ -155,7 +152,6 @@ export function Header() {
               <Search className="h-4 w-4" />
             </button>
 
-            {/* Desktop Auth */}
             <div className="hidden sm:flex items-center">
               {user ? (
                 <div className="flex items-center gap-3 ml-2 border-l border-white/10 pl-4">
@@ -175,14 +171,13 @@ export function Header() {
                 <button
                   onClick={handleGoogleLogin}
                   disabled={isLoggingIn}
-                  className="ml-2 flex items-center gap-2 rounded-xl bg-white px-4 py-1.5 text-xs font-bold text-black hover:bg-zinc-200 transition shadow-md"
+                  className="ml-2 flex items-center gap-2 rounded-xl bg-white px-4 py-1.5 text-xs font-bold text-black hover:bg-zinc-200 transition shadow-[0_0_15px_rgba(255,255,255,0.25)]"
                 >
                   {isLoggingIn ? "Connecting..." : "Login"} <LogIn className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setOpen((s) => !s)}
               aria-label="Menu"
@@ -193,14 +188,14 @@ export function Header() {
           </div>
         </div>
 
-        {/* Search Bar Dropdown */}
+        {/* 🔍 SEARCH PANEL */}
         <AnimatePresence>
           {searchOpen && (
             <motion.div
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-white/10 bg-zinc-950/95 backdrop-blur-2xl"
+              className="overflow-hidden border-t border-white/10 bg-black/40 backdrop-blur-2xl"
             >
               <div className="mx-auto max-w-7xl px-4 py-3">
                 <div className="flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-3">
@@ -214,7 +209,7 @@ export function Header() {
                   />
                 </div>
                 {term && (
-                  <div className="mt-2 divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/95">
+                  <div className="mt-2 divide-y divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-zinc-900/90 backdrop-blur-2xl">
                     {results.length === 0 ? (
                       <p className="px-4 py-3 text-sm text-zinc-400">No results found.</p>
                     ) : (
@@ -243,14 +238,14 @@ export function Header() {
           )}
         </AnimatePresence>
 
-        {/* Mobile Dropdown Menu (Clean Glass Accordion) */}
+        {/* 📱 MOBILE NAV MENU: Seamless semi-transparent backdrop */}
         <AnimatePresence>
           {open && (
             <motion.nav
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-t border-white/10 bg-zinc-950/95 backdrop-blur-2xl md:hidden"
+              className="overflow-hidden border-t border-white/10 bg-black/70 backdrop-blur-2xl md:hidden"
             >
               <div className="mx-auto flex max-w-7xl flex-col px-4 py-3 space-y-1">
                 {NAV.map((item) => {
@@ -270,7 +265,6 @@ export function Header() {
                   )
                 })}
                 
-                {/* Mobile Login Button */}
                 <div className="mt-2 border-t border-white/10 pt-2">
                   {user ? (
                     <div className="flex items-center justify-between px-3.5 py-3">
@@ -297,6 +291,9 @@ export function Header() {
           )}
         </AnimatePresence>
       </header>
+
+      {/* Spacer */}
+      <div className="h-16 w-full" />
     </>
   )
 }
