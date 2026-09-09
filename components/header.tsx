@@ -36,7 +36,6 @@ export function Header() {
     setIsLoggingIn(true)
     try {
       const provider = new GoogleAuthProvider()
-      // Google account selection dialog force trigger
       provider.setCustomParameters({
         prompt: "select_account",
       })
@@ -60,36 +59,36 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
+    <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 shadow-[0_4px_30px_rgba(0,0,0,0.7)]">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         
-        {/* 🔥 CCU BADA PREMIUM GLOWING LOGO */}
+        {/* 🔥 OFFICIAL SQUARE CCU MARVEL-STYLE LOGO */}
         <Link href="/" className="group flex items-center gap-3.5 focus:outline-none">
           <div className="relative h-12 w-12 sm:h-14 sm:w-14 shrink-0 transition-transform duration-300 group-hover:scale-105">
-            {/* Ambient Red/Gold Aura Glow behind Logo */}
-            <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-red-600 via-amber-500 to-yellow-500 opacity-60 blur-md group-hover:opacity-100 transition-opacity duration-300" />
+            {/* Cinematic Red Ambient Glow */}
+            <div className="absolute -inset-1 rounded-xl bg-red-600 opacity-70 blur-md group-hover:opacity-100 transition-opacity duration-300" />
             
             <Image
               src="/ccu-logo.png"
-              alt="CCU Studios Logo"
+              alt="CCU Logo"
               fill
               priority
-              className="relative rounded-full object-cover ring-2 ring-yellow-500/40 shadow-2xl"
+              className="relative rounded-lg object-contain border border-red-500/50 shadow-2xl"
               sizes="64px"
             />
           </div>
 
           <div className="flex flex-col">
-            <span className="font-display text-xl sm:text-2xl font-black tracking-widest text-white uppercase drop-shadow-[0_2px_10px_rgba(255,255,255,0.2)]">
+            <span className="font-display text-xl sm:text-2xl font-black tracking-wider text-white uppercase drop-shadow-[0_2px_12px_rgba(220,38,38,0.4)]">
               CCU <span className="text-red-500">STUDIOS</span>
             </span>
-            <span className="text-[10px] tracking-[0.25em] text-yellow-500/90 font-bold uppercase -mt-1 hidden sm:block">
-              Cosmic Universe
+            <span className="text-[10px] tracking-[0.25em] text-zinc-400 font-bold uppercase -mt-1 hidden sm:block">
+              Cosmic Cinematic Universe
             </span>
           </div>
         </Link>
 
-        {/* Desktop Navigation Links (Frosted Glass Pill Look) */}
+        {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-1 rounded-full border border-white/10 bg-zinc-900/40 px-3 py-1.5 backdrop-blur-md">
           {navLinks.map((link) => {
             const Icon = link.icon
@@ -111,7 +110,7 @@ export function Header() {
           })}
         </nav>
 
-        {/* Auth / Action Button */}
+        {/* Auth / Profile Area */}
         <div className="hidden md:flex items-center gap-3">
           {user ? (
             <div className="flex items-center gap-3">
@@ -122,7 +121,7 @@ export function Header() {
                     alt={user.displayName || "User"}
                     width={24}
                     height={24}
-                    className="rounded-full ring-1 ring-yellow-500/50"
+                    className="rounded-full ring-1 ring-red-500/50"
                   />
                 ) : (
                   <UserCircle className="h-5 w-5 text-zinc-400" />
@@ -143,7 +142,7 @@ export function Header() {
             <button
               onClick={handleGoogleLogin}
               disabled={isLoggingIn}
-              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-700 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.35)] transition-all hover:scale-105 hover:brightness-110 active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-2 rounded-full bg-gradient-to-r from-red-600 to-red-700 px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] transition-all hover:scale-105 hover:brightness-110 active:scale-95 disabled:opacity-50"
             >
               <LogIn className="h-4 w-4" />
               {isLoggingIn ? "Connecting..." : "Sign In"}
