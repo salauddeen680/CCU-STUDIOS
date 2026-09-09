@@ -1,18 +1,23 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { BookOpen, Sparkles } from "lucide-react"
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden border-b border-border/70">
+    <section className="relative overflow-hidden border-b border-border/70 bg-zinc-950">
+      {/* 🔥 NEXT.JS ULTRA-FAST HERO BACKGROUND */}
       <div className="absolute inset-0">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src="/hero-cosmic.png"
-          alt=""
-          className="h-full w-full object-cover opacity-70"
+          alt="CCU Cosmic Universe"
+          fill
+          priority
+          quality={80}
+          sizes="100vw"
+          className="object-cover opacity-70"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/70 to-background/40" />
       </div>
@@ -30,7 +35,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.05 }}
-          className="mt-3 max-w-2xl text-balance font-display text-4xl font-bold leading-tight sm:text-6xl"
+          className="mt-3 max-w-2xl text-balance font-display text-4xl font-bold leading-tight sm:text-6xl text-white"
         >
           Enter the <span className="text-glow text-primary">CCU</span> Universe
         </motion.h1>
