@@ -19,7 +19,8 @@ import { useComics, useCharacters, useAllComments, deleteComment } from "@/lib/d
 import { db } from "@/lib/firebase"
 import { collection, onSnapshot } from "firebase/firestore"
 
-const BLOCKED_EMAILS = ["admin@ccustudios.com", "srk042221@gmail.com"]
+// 🔥 FIX: Removed your testing email from the block list so your views will now show up!
+const BLOCKED_EMAILS = ["admin@ccustudios.com"]
 
 export function EngagementPanel() {
   const { comics = [] } = useComics()
