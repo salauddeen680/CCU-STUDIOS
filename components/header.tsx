@@ -17,7 +17,7 @@ import {
   Search
 } from "lucide-react"
 import { auth } from "@/lib/firebase"
-import { GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User } from "firebase/auth"
+import { GoogleAuthProvider, signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, User } from "firebase/auth"
 
 export function Header() {
   const pathname = usePathname()
@@ -42,11 +42,29 @@ export function Header() {
     if (isLoggingIn) return
     setIsLoggingIn(true)
     try {
-      const provider = new GoogleAuthProvider()
-      provider.setCustomParameters({
-        prompt: "select_account",
-      })
-      await signInWithPopup(auth, provider)
+      // Safe check for Android Native App vs Web Vercel build
+      const cap = (typeof window !== 'undefined' && (window as any).Capacitor) ? (window as any).Capacitor : null;
+
+      if (cap && cap.isNativePlatform() && cap.Plugins?.GoogleAuth) {
+        // 🔥 NATIVE 1-TAP LOGIN FOR ANDROID APP
+        const GoogleAuth = cap.Plugins.GoogleAuth;
+        await GoogleAuth.initialize({
+          clientId: '359808133294-vk1bc10b7uolubjkv4nebim9f2p74ebn.apps.googleusercontent.com',
+          scopes: ['profile', 'email'],
+          grantOfflineAccess: true,
+        });
+        
+        const googleUser = await GoogleAuth.signIn();
+        const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
+        await signInWithCredential(auth, credential);
+      } else {
+        // 🌐 WEB LOGIN (Vercel Browser)
+        const provider = new GoogleAuthProvider()
+        provider.setCustomParameters({
+          prompt: "select_account",
+        })
+        await signInWithPopup(auth, provider)
+      }
     } catch (error: any) {
       console.error("Login Error:", error)
       if (error?.code !== "auth/popup-closed-by-user") {
