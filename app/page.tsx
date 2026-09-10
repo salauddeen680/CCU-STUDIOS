@@ -79,7 +79,7 @@ export default async function HomePage() {
         <ComicSlider comics={allComics} />
       </div>
 
-      {/* 📥 DOWNLOAD APP SECTION (Direct APK Direct Link) */}
+      {/* 📥 DOWNLOAD APP SECTION (Google Drive Direct APK Link) */}
       <section className="w-full bg-black py-10 border-t border-zinc-900/60 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-t from-red-950/20 to-transparent pointer-events-none"></div>
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10 flex flex-col items-center gap-4">
@@ -93,9 +93,7 @@ export default async function HomePage() {
             Experience lightning-fast reading, 1-Tap Google login, and real-time cosmic sync straight from our native Android application.
           </p>
           <a
-            href="https://github.com/salauddeen680/CCU-STUDIOS/releases"
-            target="_blank"
-            rel="noreferrer"
+            href="https://drive.google.com/uc?export=download&id=1vcTaUBnEt06x6PorON98KA2NVn0tngff"
             className="mt-2 inline-flex items-center gap-3 rounded-xl bg-red-600 hover:bg-red-500 px-8 py-3.5 font-display text-sm font-bold text-white shadow-lg shadow-red-900/30 transition-all duration-300 hover:scale-105"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
