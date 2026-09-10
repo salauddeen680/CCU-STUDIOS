@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { SiteShell } from "@/components/site-shell"
 import { Hero } from "@/components/hero"
 import ComicSlider from "@/components/ComicSlider"
-import { HomeVideoLinks } from "@/components/home-video-links" // 👈 Naya Import add kiya hai
+import { HomeVideoLinks } from "@/components/home-video-links"
 import { db } from "@/lib/firebase"
 import { collection, getDocs } from "firebase/firestore"
 
@@ -79,13 +79,39 @@ export default async function HomePage() {
         <ComicSlider comics={allComics} />
       </div>
 
+      {/* 📥 DOWNLOAD APP SECTION (Direct APK Direct Link) */}
+      <section className="w-full bg-black py-10 border-t border-zinc-900/60 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-t from-red-950/20 to-transparent pointer-events-none"></div>
+        <div className="max-w-4xl mx-auto px-4 text-center relative z-10 flex flex-col items-center gap-4">
+          <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-red-500 bg-red-950/40 border border-red-900/50 px-3 py-1 rounded-full">
+            Official Android Release
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-wide">
+            Take CCU Studios Anywhere
+          </h2>
+          <p className="text-xs sm:text-sm text-zinc-400 max-w-lg">
+            Experience lightning-fast reading, 1-Tap Google login, and real-time cosmic sync straight from our native Android application.
+          </p>
+          <a
+            href="https://github.com/salauddeen680/CCU-STUDIOS/releases"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex items-center gap-3 rounded-xl bg-red-600 hover:bg-red-500 px-8 py-3.5 font-display text-sm font-bold text-white shadow-lg shadow-red-900/30 transition-all duration-300 hover:scale-105"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download Android App (APK)
+          </a>
+        </div>
+      </section>
+
       {/* 🎬 DYNAMIC SECTION: Cinematic Video Links & Social Media */}
       <section className="w-full bg-black pb-20 border-t border-zinc-900/50 pt-16 relative">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-red-900/10 blur-[100px] pointer-events-none"></div>
 
         <div className="max-w-7xl mx-auto px-4 flex flex-col items-center gap-14 relative z-10">
           
-          {/* 🔗 Yahan tumhare admin dashboard se dale gaye social links ek ke niche ek aayenge */}
           <HomeVideoLinks />
 
           {/* 📱 Social Media Icons */}
@@ -117,4 +143,3 @@ export default async function HomePage() {
     </SiteShell>
   )
 }
- 
