@@ -79,30 +79,65 @@ export default async function HomePage() {
         <ComicSlider comics={allComics} />
       </div>
 
-      {/* 📥 DOWNLOAD APP SECTION (Google Drive Direct APK Link) */}
-      <section className="w-full bg-black py-10 border-t border-zinc-900/60 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-red-950/20 to-transparent pointer-events-none"></div>
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-10 flex flex-col items-center gap-4">
-          <span className="text-[10px] font-mono uppercase tracking-[0.3em] text-red-500 bg-red-950/40 border border-red-900/50 px-3 py-1 rounded-full">
-            Official Android Release
-          </span>
-          <h2 className="text-2xl sm:text-3xl font-display font-bold text-white tracking-wide">
-            Take CCU Studios Anywhere
-          </h2>
-          <p className="text-xs sm:text-sm text-zinc-400 max-w-lg">
-            Experience lightning-fast reading, 1-Tap Google login, and real-time cosmic sync straight from our native Android application.
-          </p>
+      {/* 📥 PREMIUM DOWNLOAD APP SECTION */}
+      {/* Maine yahan id="app-download-section" add kiya hai taaki script isko pehchaan sake */}
+      <section id="app-download-section" className="w-full bg-black py-16 border-y border-zinc-900/80 relative overflow-hidden flex justify-center">
+        {/* Ambient Cosmic Background Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-red-900/20 blur-[120px] pointer-events-none rounded-full"></div>
+
+        {/* Glassmorphism Card Container */}
+        <div className="relative z-10 w-full max-w-2xl mx-4 p-8 sm:p-12 rounded-[2rem] bg-zinc-950/60 border border-zinc-800/50 shadow-2xl backdrop-blur-md flex flex-col items-center gap-6 text-center">
+          
+          {/* Animated Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-950/40 border border-red-900/50 shadow-inner">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span className="text-[11px] font-mono uppercase tracking-[0.25em] text-red-400 font-bold">
+              Official Android Release
+            </span>
+          </div>
+
+          {/* Typography Upgrade */}
+          <div className="space-y-4">
+            <h2 className="text-3xl sm:text-4xl font-display font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white via-zinc-200 to-zinc-500 tracking-tight">
+              Take CCU Studios Anywhere
+            </h2>
+            <p className="text-sm sm:text-base text-zinc-400 max-w-md mx-auto leading-relaxed">
+              Experience lightning-fast reading, 1-Tap Google login, and real-time cosmic sync straight from our native Android application.
+            </p>
+          </div>
+
+          {/* Premium Glowing Button */}
           <a
             href="https://drive.google.com/uc?export=download&id=1vcTaUBnEt06x6PorON98KA2NVn0tngff"
-            className="mt-2 inline-flex items-center gap-3 rounded-xl bg-red-600 hover:bg-red-500 px-8 py-3.5 font-display text-sm font-bold text-white shadow-lg shadow-red-900/30 transition-all duration-300 hover:scale-105"
+            target="_blank"
+            rel="noopener noreferrer"
+            download="CCU-Studios.apk"
+            className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 mt-2 w-full sm:w-auto font-bold text-white transition-all duration-300 rounded-2xl bg-gradient-to-b from-red-600 to-red-900 hover:from-red-500 hover:to-red-800 shadow-[0_0_40px_-10px_rgba(220,38,38,0.4)] hover:shadow-[0_0_60px_-15px_rgba(220,38,38,0.6)] hover:-translate-y-1 ring-1 ring-red-500/50"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <svg className="w-6 h-6 transition-transform duration-300 group-hover:-translate-y-1" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
-            Download Android App (APK)
+            <span className="text-sm sm:text-base tracking-wide drop-shadow-md">Download Android App (APK)</span>
           </a>
         </div>
       </section>
+
+      {/* 🛡️ APP DETECTION SCRIPT (Yeh script App ke andar download button ko gayab kar dega) */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            if (typeof window !== 'undefined') {
+              var ua = navigator.userAgent || '';
+              // Check karta hai ki kya yeh Android WebView (App) hai
+              if (ua.includes('wv') || (ua.includes('Android') && ua.includes('Version/'))) {
+                var style = document.createElement('style');
+                style.innerHTML = '#app-download-section { display: none !important; }';
+                document.head.appendChild(style);
+              }
+            }
+          `
+        }}
+      />
 
       {/* 🎬 DYNAMIC SECTION: Cinematic Video Links & Social Media */}
       <section className="w-full bg-black pb-20 border-t border-zinc-900/50 pt-16 relative">
