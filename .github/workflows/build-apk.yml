@@ -27,12 +27,11 @@ jobs:
 
       - name: Generate Master Production Android App
         run: |
-          mkdir /tmp/app-build
+          mkdir -p /tmp/app-build
           cd /tmp/app-build
           npm init -y
           npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0 @capacitor/assets@3.0.5
 
-          # 1. Capacitor Config with Native Navigation & Razorpay/Google Allow-list
           cat << 'EOF' > capacitor.config.json
           {
             "appId": "com.ccustudios.app",
@@ -52,16 +51,14 @@ jobs:
               ]
             },
             "android": {
-              "allowMixedContent": true,
-              "appendUserAgent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36"
+              "allowMixedContent": true
             }
           }
           EOF
 
           mkdir public
-          echo "<html><body style='background:#050505;color:#fff;'>Loading CCU Studios...</body></html>" > public/index.html
+          echo "<html><body style='background:#000;color:#fff;'>Loading CCU Studios...</body></html>" > public/index.html
 
-          # 2. Official CCU Red Branding Assets
           mkdir -p assets
           curl -sL "https://ccu-studios.vercel.app/ccu-logo.png" -o assets/logo.png
           cp assets/logo.png assets/icon-only.png
@@ -72,18 +69,12 @@ jobs:
           npx cap add android
           npx capacitor-assets generate --android
 
-          # 3. AndroidManifest: Internet + Razorpay / UPI Deep Links whitelist
           python3 - << 'EOF'
-          import os
-
           manifest_path = "android/app/src/main/AndroidManifest.xml"
           with open(manifest_path, "r") as f:
               data = f.read()
-
-          # Add cleartext & hardware acceleration
-          data = data.replace('<application', '<application android:usesCleartextTraffic="true" android:hardwareAccelerated="true"')
-
-          # Add queries for UPI Apps & Razorpay Checkout
+          if 'android:usesCleartextTraffic="true"' not in data:
+              data = data.replace('<application', '<application android:usesCleartextTraffic="true"')
           queries = """
               <queries>
                   <intent>
@@ -95,8 +86,8 @@ jobs:
                   <package android:name="net.one97.paytm" />
               </queries>
           """
-          data = data.replace('</manifest>', queries + '\n</manifest>')
-
+          if '<queries>' not in data:
+              data = data.replace('</manifest>', queries + '\n</manifest>')
           with open(manifest_path, "w") as f:
               f.write(data)
           EOF
@@ -104,40 +95,39 @@ jobs:
           echo "android.enableJetifier=true" >> android/gradle.properties
           echo "android.useAndroidX=true" >> android/gradle.properties
 
-          # 4. Native MainActivity Patch: Full Support for Google OAuth & Razorpay Popups
-          cat << 'EOF' > patch.py
-          import os
+          cat << 'EOF' > android/app/src/main/java/com/ccustudios/app/MainActivity.java
+          package com.ccustudios.app;
 
-          path = "android/app/src/main/java/com/ccustudios/app/MainActivity.java"
-          if os.path.exists(path):
-              with open(path, "r") as f:
-                  content = f.read()
-
-              import_stmt = """import android.webkit.WebSettings;
+          import android.os.Bundle;
+          import android.webkit.WebSettings;
           import android.webkit.WebView;
           import android.webkit.WebChromeClient;
           import android.webkit.WebViewClient;
+          import android.webkit.CookieManager;
           import android.content.Intent;
           import android.net.Uri;
           import android.os.Message;
           import android.app.Dialog;
-          import android.os.Bundle;
-          """
-              if "import android.webkit.WebSettings;" not in content:
-                  content = content.replace("package com.ccustudios.app;", "package com.ccustudios.app;\n" + import_stmt)
+          import com.getcapacitor.BridgeActivity;
 
-              method_code = """
+          public class MainActivity extends BridgeActivity {
               @Override
               public void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
+
                   if (this.bridge != null && this.bridge.getWebView() != null) {
                       WebView mainWebView = this.bridge.getWebView();
                       WebSettings settings = mainWebView.getSettings();
+
                       settings.setJavaScriptEnabled(true);
                       settings.setDomStorageEnabled(true);
                       settings.setDatabaseEnabled(true);
-                      settings.setJavaScriptCanOpenWindowsAutomatically(true);
                       settings.setSupportMultipleWindows(true);
+                      settings.setJavaScriptCanOpenWindowsAutomatically(true);
+
+                      CookieManager cookieManager = CookieManager.getInstance();
+                      cookieManager.setAcceptCookie(true);
+                      cookieManager.setAcceptThirdPartyCookies(mainWebView, true);
 
                       mainWebView.setWebViewClient(new WebViewClient() {
                           @Override
@@ -163,7 +153,8 @@ jobs:
                               pSettings.setJavaScriptEnabled(true);
                               pSettings.setDomStorageEnabled(true);
                               pSettings.setSupportMultipleWindows(true);
-                              pSettings.setUserAgentString(mainWebView.getSettings().getUserAgentString());
+
+                              CookieManager.getInstance().setAcceptThirdPartyCookies(popupWebView, true);
 
                               Dialog dialog = new Dialog(MainActivity.this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
                               dialog.setContentView(popupWebView);
@@ -199,21 +190,17 @@ jobs:
                       });
                   }
               }
-              """
-
-              if "@Override\n    public void onCreate" not in content:
-                  pos = content.rfind("}")
-                  if pos != -1:
-                      content = content[:pos] + method_code + "\n}"
-
-              with open(path, "w") as f:
-                  f.write(content)
+          }
           EOF
-          python3 patch.py
 
-          # 5. Build Final Release Artifacts
+          # 🔥 FIREBASE SHA-1 EXTRACTOR
           cd android
           chmod +x gradlew
+          echo "================================================="
+          echo "🔑 YAHAN HAI AAPKI SHA-1 KEY FIREBASE KE LIYE:"
+          ./gradlew signingReport | grep "SHA1"
+          echo "================================================="
+
           ./gradlew assembleDebug --no-daemon
           ./gradlew bundleDebug --no-daemon
 
@@ -221,13 +208,13 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk $GITHUB_WORKSPACE/output/CCU-Studios.apk
           cp app/build/outputs/bundle/debug/app-debug.aab $GITHUB_WORKSPACE/output/CCU-Studios.aab
 
-      - name: Upload APK (Direct Mobile Install)
+      - name: Upload Direct Install APK
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-Direct-Install-APK
           path: output/CCU-Studios.apk
 
-      - name: Upload AAB (Play Store Release)
+      - name: Upload Play Store AAB
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-Store-AAB
