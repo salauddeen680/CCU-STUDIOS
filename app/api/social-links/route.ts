@@ -5,7 +5,11 @@ import {
   deleteDoc, doc, query, orderBy 
 } from "firebase/firestore"
 
-// 🔐 Firebase Initialization (Aapke environment variables se automatic connect hoga)
+// 🚀 CRITICAL FIX: Next.js ko cache karne se rokne ke liye (Taaki naye videos turant dikhein)
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// 🔐 Firebase Initialization 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -18,11 +22,10 @@ const firebaseConfig = {
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 const db = getFirestore(app)
 
-// 📥 1. GET ROUTE: Saare Video links ko database se khinch kar website par dikhane ke liye
+// 📥 1. GET ROUTE: Saare Video links laane ke liye
 export async function GET() {
   try {
     const linksRef = collection(db, "social_links")
-    // Naye videos upar dikhein, isliye timestamp ke hisab se order kiya hai
     const q = query(linksRef, orderBy("createdAt", "desc"))
     const querySnapshot = await getDocs(q)
     
@@ -38,7 +41,7 @@ export async function GET() {
   }
 }
 
-// ➕ 2. POST ROUTE: Admin panel se naya video link Firebase mein save karne ke liye
+// ➕ 2. POST ROUTE: Naya video add karne ke liye
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -63,7 +66,7 @@ export async function POST(request: Request) {
   }
 }
 
-// 🗑️ 3. DELETE ROUTE: Admin panel se video link ko Firebase se delete karne ke liye
+// 🗑️ 3. DELETE ROUTE: Video delete karne ke liye
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -82,4 +85,3 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
-
