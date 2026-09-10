@@ -193,15 +193,18 @@ jobs:
           }
           EOF
 
-          # 🔥 FIREBASE SHA-1 EXTRACTOR
           cd android
           chmod +x gradlew
+          
+          # 🔥 PEHLE BUILD KARENGE TAAKI KEYSTORE BAN JAYE
+          ./gradlew assembleDebug --no-daemon
+          
+          # 🔥 AB SHA-1 KEY NIKALENGE (CRASH PROOF)
           echo "================================================="
           echo "🔑 YAHAN HAI AAPKI SHA-1 KEY FIREBASE KE LIYE:"
-          ./gradlew signingReport | grep "SHA1"
+          ./gradlew signingReport || true
           echo "================================================="
 
-          ./gradlew assembleDebug --no-daemon
           ./gradlew bundleDebug --no-daemon
 
           mkdir -p $GITHUB_WORKSPACE/output
