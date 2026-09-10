@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { getApps, getApp, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
 
 const firebaseConfig = {
@@ -15,7 +15,8 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const BLOCKED_ADMINS = ["admin@ccustudios.com", "srk042221@gmail.com"];
+// 🔥 FIX 1: Testing email hata di gayi hai taaki aapke views block na hon
+const BLOCKED_ADMINS = ["admin@ccustudios.com"];
 
 export default function PageTracker() {
   const pathname = usePathname();
@@ -31,13 +32,12 @@ export default function PageTracker() {
     if (lastPath.current === pathname) return;
     lastPath.current = pathname;
 
-    const recordVisit = async () => {
-      try {
-        const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+    const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-        const currentUser = auth?.currentUser;
+    const recordVisit = async (currentUser: any) => {
+      try {
         const email = (currentUser?.email || "").toLowerCase();
 
         if (BLOCKED_ADMINS.some((adm) => email.includes(adm.toLowerCase()))) {
@@ -46,14 +46,19 @@ export default function PageTracker() {
 
         const userTag = currentUser ? (currentUser.email || currentUser.displayName || "Member") : "Guest Reader";
 
+        // 🔥 FIX 2: Native Android App detection
         const ua = navigator?.userAgent || "";
+        const isCapacitor = typeof window !== 'undefined' && (window as any).Capacitor;
+        
         let device = "Desktop PC";
-        if (/Android/i.test(ua)) device = "Android Mobile";
+        if (isCapacitor || ua.includes("wv")) device = "CCU Android App";
+        else if (/Android/i.test(ua)) device = "Android Mobile";
         else if (/iPhone/i.test(ua)) device = "iPhone";
         else if (/iPad/i.test(ua)) device = "iPad Tablet";
 
         let browser = "Browser";
-        if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome";
+        if (isCapacitor || ua.includes("wv")) browser = "Native App";
+        else if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome";
         else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
         else if (ua.includes("Firefox")) browser = "Firefox";
         else if (ua.includes("Edg")) browser = "Edge";
@@ -81,8 +86,12 @@ export default function PageTracker() {
       }
     };
 
-    const timer = setTimeout(recordVisit, 400);
-    return () => clearTimeout(timer);
+    // 🔥 FIX 3: Firebase Auth delay handle kiya. Ab ye "Guest" bhejne se pehle login check karega.
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      recordVisit(user);
+      unsubscribe(); // Run only once per page load to avoid duplicates
+    });
+
   }, [pathname]);
 
   return null;
