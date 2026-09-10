@@ -76,6 +76,11 @@ jobs:
           npx cap add android
           npx capacitor-assets generate --android
 
+          # 🔥 INJECTING FIREBASE IDENTITY CARD (google-services.json)
+          cat << 'EOF' > android/app/google-services.json
+          { "project_info": { "project_number": "359808133294", "project_id": "ccu-studios", "storage_bucket": "ccu-studios.firebasestorage.app" }, "client": [ { "client_info": { "mobilesdk_app_id": "1:359808133294:android:85e3e31f4d760561d3e53f", "android_client_info": { "package_name": "com.ccustudios.app" } }, "oauth_client": [ { "client_id": "359808133294-9lcvtci8gcj5esa0uitbdb04httnncn0.apps.googleusercontent.com", "client_type": 1, "android_info": { "package_name": "com.ccustudios.app", "certificate_hash": "7ff4ec94a4b67bd80c1e3cfa9f6887c7d3a26fd3" } }, { "client_id": "359808133294-vk1bc10b7uolubjkv4nebim9f2p74ebn.apps.googleusercontent.com", "client_type": 3 } ], "api_key": [ { "current_key": "AIzaSyDNhxkpU-Ux_9JuS-eBvogua85BZyHkp6g" } ], "services": { "appinvite_service": { "other_platform_oauth_client": [ { "client_id": "359808133294-vk1bc10b7uolubjkv4nebim9f2p74ebn.apps.googleusercontent.com", "client_type": 3 } ] } } } ], "configuration_version": "1" }
+          EOF
+
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
           <?xml version='1.0' encoding='utf-8'?>
           <resources>
