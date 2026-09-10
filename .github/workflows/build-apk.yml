@@ -30,7 +30,7 @@ jobs:
           mkdir -p /tmp/app-build
           cd /tmp/app-build
           npm init -y
-          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0 @capacitor/assets@3.0.5
+          npm install @capacitor/core@6.2.0 @capacitor/cli@6.2.0 @capacitor/android@6.2.0 @capacitor/assets@3.0.5 @codetrix-studio/capacitor-google-auth@3.3.4 --legacy-peer-deps
 
           cat << 'EOF' > capacitor.config.json
           {
@@ -50,6 +50,13 @@ jobs:
                 "*.firebaseapp.com"
               ]
             },
+            "plugins": {
+              "GoogleAuth": {
+                "scopes": ["profile", "email"],
+                "serverClientId": "359808133294-vk1bc10b7uolubjkv4nebim9f2p74ebn.apps.googleusercontent.com",
+                "forceCodeForRefreshToken": true
+              }
+            },
             "android": {
               "allowMixedContent": true
             }
@@ -68,6 +75,17 @@ jobs:
 
           npx cap add android
           npx capacitor-assets generate --android
+
+          cat << 'EOF' > android/app/src/main/res/values/strings.xml
+          <?xml version='1.0' encoding='utf-8'?>
+          <resources>
+              <string name="app_name">CCU Studios</string>
+              <string name="title_activity_main">CCU Studios</string>
+              <string name="package_name">com.ccustudios.app</string>
+              <string name="custom_url_scheme">com.ccustudios.app</string>
+              <string name="server_client_id">359808133294-vk1bc10b7uolubjkv4nebim9f2p74ebn.apps.googleusercontent.com</string>
+          </resources>
+          EOF
 
           python3 - << 'EOF'
           manifest_path = "android/app/src/main/AndroidManifest.xml"
@@ -195,16 +213,7 @@ jobs:
 
           cd android
           chmod +x gradlew
-          
-          # 🔥 PEHLE BUILD KARENGE TAAKI KEYSTORE BAN JAYE
           ./gradlew assembleDebug --no-daemon
-          
-          # 🔥 AB SHA-1 KEY NIKALENGE (CRASH PROOF)
-          echo "================================================="
-          echo "🔑 YAHAN HAI AAPKI SHA-1 KEY FIREBASE KE LIYE:"
-          ./gradlew signingReport || true
-          echo "================================================="
-
           ./gradlew bundleDebug --no-daemon
 
           mkdir -p $GITHUB_WORKSPACE/output
