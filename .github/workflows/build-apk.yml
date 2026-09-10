@@ -216,7 +216,16 @@ jobs:
 
           cd android
           chmod +x gradlew
+          
+          # 🔥 PEHLE BUILD HOGA TAAKI KEYSTORE BAN JAYE
           ./gradlew assembleDebug --no-daemon
+          
+          # 🔥 YAHAN SE SHA-1 PRINT HOGA JO FIREBASE MEIN DAALNA ZAROORI HAI
+          echo "========================================================"
+          echo "🔑 YAHAN HAI AAPKI NAYI SHA-1 KEY FIREBASE KE LIYE:"
+          ./gradlew signingReport || true
+          echo "========================================================"
+
           ./gradlew bundleDebug --no-daemon
 
           mkdir -p $GITHUB_WORKSPACE/output
