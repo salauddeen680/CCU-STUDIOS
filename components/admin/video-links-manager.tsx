@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Video, Plus, Trash2, Loader2, Link2, Image as ImageIcon } from "lucide-react"
+import { Video, Plus, Trash2, Loader2, Link2, Image as ImageIcon, Sparkles } from "lucide-react"
 
 interface VideoLink {
   id: string
@@ -10,7 +10,6 @@ interface VideoLink {
   posterUrl: string
 }
 
-// 👑 CRITICAL FIX: Sahi tareeke se 'VideoLinksManager' naam export hona chahiye
 export function VideoLinksManager() {
   const [links, setLinks] = useState<VideoLink[]>([])
   const [loading, setLoading] = useState(true)
@@ -22,7 +21,7 @@ export function VideoLinksManager() {
   const [posterUrl, setPosterUrl] = useState("")
   const [message, setMessage] = useState("")
 
-  // 📥 Video Links Fetch karne ke liye (Relative URL use kiya hai taaki crash na ho)
+  // 📥 Video Links Fetch karne ke liye
   async function fetchLinks() {
     try {
       const res = await fetch("/api/social-links")
@@ -41,6 +40,26 @@ export function VideoLinksManager() {
     fetchLinks()
   }, [])
 
+  // 🤖 MAGIC FUNCTION: YouTube Link se Video ID nikalne ke liye
+  const extractYouTubeID = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+  }
+
+  // 🎯 Jaise hi URL type hoga, yeh function chalega
+  const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newUrl = e.target.value
+    setUrl(newUrl)
+
+    // Check agar YouTube link hai, toh automatically thumbnail set kar do
+    const ytId = extractYouTubeID(newUrl)
+    if (ytId) {
+      // YouTube ka official HD thumbnail URL
+      setPosterUrl(`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`)
+    }
+  }
+
   // ➕ Naya Video Link Add karne ke liye
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,7 +77,7 @@ export function VideoLinksManager() {
         setMessage("Success! Video Link Added 🔥")
         setTitle("")
         setUrl("")
-        setPosterUrl("")
+        setPosterUrl("") // Reset
         fetchLinks()
       } else {
         setMessage("Failed to add link. Check your API route.")
@@ -78,7 +97,6 @@ export function VideoLinksManager() {
       const res = await fetch(`/api/api/social-links?id=${id}`, {
         method: "DELETE",
       })
-      // Yahan relative path agar aapka API folder structure alag hai toh use adjust karein
       const fallbackRes = res.ok ? res : await fetch(`/api/social-links?id=${id}`, { method: "DELETE" })
       
       if (fallbackRes.ok) {
@@ -103,7 +121,7 @@ export function VideoLinksManager() {
       {/* Form Card */}
       <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6">
         <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Plus className="h-4 w-4 text-red-600" /> Add New Video Poster
+          <Plus className="h-4 w-4 text-red-600" /> Add New Video
         </h2>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -121,14 +139,14 @@ export function VideoLinksManager() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Video URL (YouTube/Insta)</label>
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Video URL (YouTube)</label>
               <div className="relative">
                 <Link2 className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
                 <input
                   type="url"
                   required
                   value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  onChange={handleUrlChange} // 🪄 Magic function yahan call ho raha hai
                   className="w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
                   placeholder="https://youtube.com/watch?v=..."
                 />
@@ -137,7 +155,14 @@ export function VideoLinksManager() {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Poster / Thumbnail Image URL</label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Poster / Thumbnail Image URL</label>
+              {extractYouTubeID(url) && (
+                <span className="text-[10px] text-green-400 flex items-center gap-1 font-bold tracking-widest bg-green-950/40 px-2 py-0.5 rounded border border-green-900/50">
+                  <Sparkles className="h-3 w-3" /> AUTO-GENERATED
+                </span>
+              )}
+            </div>
             <div className="relative">
               <ImageIcon className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
               <input
@@ -146,9 +171,14 @@ export function VideoLinksManager() {
                 value={posterUrl}
                 onChange={(e) => setPosterUrl(e.target.value)}
                 className="w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
-                placeholder="https://images.unsplash.com/..."
+                placeholder="Paste link, or let it auto-fill for YouTube..."
               />
             </div>
+            {posterUrl && (
+              <div className="mt-2 h-24 w-40 rounded-lg overflow-hidden border border-zinc-800 opacity-80">
+                <img src={posterUrl} alt="Preview" className="w-full h-full object-cover" />
+              </div>
+            )}
           </div>
 
           {message && (
