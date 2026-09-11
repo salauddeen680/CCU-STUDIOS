@@ -50,7 +50,6 @@ async function getComicsData() {
   }
 }
 
-// 🚀 NAYA FIX: Hum 'searchParams' ko check karenge taaki URL se pata chal sake ki yeh app hai
 export default async function HomePage({
   searchParams,
 }: {
@@ -58,7 +57,7 @@ export default async function HomePage({
 }) {
   const allComics = await getComicsData()
   
-  // 🔍 Yahan check ho raha hai ki kya URL mein "?source=android_app" aaya hai
+  // 🔍 Server-side check
   const isAndroidApp = searchParams.source === "android_app";
 
   const homepageSchema = {
@@ -82,13 +81,30 @@ export default async function HomePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(homepageSchema) }}
       />
 
+      {/* 🚀 100% GLITCH-FREE WEBVIEW DETECTOR */}
+      {/* Yeh CSS aur Script page load hone se pehle hi app ko detect karke button chhipa denge */}
+      <style dangerouslySetInnerHTML={{__html: `
+        html.is-app #app-download-section { display: none !important; }
+      `}} />
+      <script dangerouslySetInnerHTML={{__html: `
+        (function() {
+          try {
+            var ua = navigator.userAgent || '';
+            var isWebView = ua.includes('wv') || (ua.includes('Android') && ua.includes('Version/'));
+            var isAppUrl = window.location.search.includes('source=android_app');
+            if (isWebView || isAppUrl) {
+              document.documentElement.classList.add('is-app');
+            }
+          } catch(e) {}
+        })();
+      `}} />
+
       <Hero />
       <div className="pb-8 bg-black">
         <ComicSlider comics={allComics} />
       </div>
 
       {/* 📥 PREMIUM DOWNLOAD APP SECTION */}
-      {/* 🚀 LOGIC: Agar "isAndroidApp" false hai, tabhi yeh section dikhega. Agar true hai, toh website isko banayegi hi nahi! */}
       {!isAndroidApp && (
         <section id="app-download-section" className="w-full bg-black py-16 border-y border-zinc-900/80 relative overflow-hidden flex justify-center">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-red-900/20 blur-[120px] pointer-events-none rounded-full"></div>
@@ -125,24 +141,6 @@ export default async function HomePage({
             </a>
           </div>
         </section>
-      )}
-
-      {/* 🛡️ APP DETECTION SCRIPT (Backup ke liye abhi bhi rakha hai) */}
-      {!isAndroidApp && (
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined') {
-                var ua = navigator.userAgent || '';
-                if (ua.includes('wv') || (ua.includes('Android') && ua.includes('Version/'))) {
-                  var style = document.createElement('style');
-                  style.innerHTML = '#app-download-section { display: none !important; }';
-                  document.head.appendChild(style);
-                }
-              }
-            `
-          }}
-        />
       )}
 
       {/* 🎬 DYNAMIC SECTION: Cinematic Video Links & Social Media */}
