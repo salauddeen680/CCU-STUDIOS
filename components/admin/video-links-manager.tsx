@@ -55,8 +55,8 @@ export function VideoLinksManager() {
     // Check agar YouTube link hai, toh automatically thumbnail set kar do
     const ytId = extractYouTubeID(newUrl)
     if (ytId) {
-      // YouTube ka official HD thumbnail URL
-      setPosterUrl(`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`)
+      // 🛠️ PERMANENT FIX YAHAN HAI: maxresdefault hata kar hqdefault kar diya hai
+      setPosterUrl(`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`)
     }
   }
 
