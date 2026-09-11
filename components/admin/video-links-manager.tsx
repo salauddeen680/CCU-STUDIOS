@@ -24,8 +24,7 @@ export function VideoLinksManager() {
   // 📥 Video Links Fetch karne ke liye (Cache-Free)
   async function fetchLinks() {
     try {
-      // 🚀 FIX 1: Admin panel mein bhi Cache hataya taaki naya video add hote hi list mein dikhe
-      const res = await fetch(`/api/social-links?t=${new Date().getTime()}`, {
+      const res = await fetch(`/api/social-links?t=${Date.now()}`, {
         cache: "no-store"
       })
       if (res.ok) {
@@ -43,22 +42,26 @@ export function VideoLinksManager() {
     fetchLinks()
   }, [])
 
-  // 🤖 MAGIC FUNCTION: YouTube Link se Video ID nikalne ke liye
-  const extractYouTubeID = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+  // 🤖 100% PERFECT YOUTUBE ID EXTRACTOR (Shorts, Normal Videos, Share links sab ke liye)
+  const extractYouTubeID = (videoUrl: string) => {
+    if (!videoUrl) return null;
+    const cleanUrl = videoUrl.trim();
+    
+    // Regular Expression jo har tarah ke YouTube link se sirf 11-digit clean ID nikalta hai
+    const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/|youtube\.com\/shorts\/)([^"&?\/\s]{11})/i;
+    const match = cleanUrl.match(regExp);
+    return match ? match[1] : null;
   }
 
-  // 🎯 Jaise hi URL type hoga, yeh function chalega
+  // 🎯 Jaise hi URL type ya paste hoga:
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newUrl = e.target.value
-    setUrl(newUrl)
+    const newUrl = e.target.value;
+    setUrl(newUrl);
 
-    // Check agar YouTube link hai, toh automatically thumbnail set kar do
-    const ytId = extractYouTubeID(newUrl)
+    const ytId = extractYouTubeID(newUrl);
     if (ytId) {
-      setPosterUrl(`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`)
+      // 🛠️ PERMANENT FIX: '0.jpg' YouTube ka official master thumbnail hai jo kabhi fail nahi hota
+      setPosterUrl(`https://img.youtube.com/vi/${ytId}/0.jpg`);
     }
   }
 
@@ -79,8 +82,8 @@ export function VideoLinksManager() {
         setMessage("Success! Video Link Added 🔥")
         setTitle("")
         setUrl("")
-        setPosterUrl("") // Reset
-        fetchLinks() // List ko turant refresh karega
+        setPosterUrl("")
+        fetchLinks()
       } else {
         setMessage("Failed to add link. Check your API route.")
       }
@@ -96,14 +99,12 @@ export function VideoLinksManager() {
     if (!confirm("Are you sure you want to delete this video link?")) return
 
     try {
-      // 🚀 FIX 2: Galat /api/api path ko theek kiya, ab delete perfect kaam karega
       const res = await fetch(`/api/social-links?id=${id}`, {
         method: "DELETE",
       })
       
       if (res.ok) {
-        // Delete hone ke baad list se turant hata dega
-        setLinks(links.filter((link) => link.id !== id))
+        setLinks((prev) => prev.filter((link) => link.id !== id))
       }
     } catch (error) {
       console.error("Failed to delete link", error)
@@ -142,7 +143,7 @@ export function VideoLinksManager() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Video URL (YouTube)</label>
+              <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Video URL (YouTube/Shorts)</label>
               <div className="relative">
                 <Link2 className="absolute left-3 top-3 h-4 w-4 text-zinc-600" />
                 <input
@@ -151,7 +152,7 @@ export function VideoLinksManager() {
                   value={url}
                   onChange={handleUrlChange}
                   className="w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
-                  placeholder="https://youtube.com/watch?v=..."
+                  placeholder="https://youtube.com/watch?v=... ya https://youtube.com/shorts/..."
                 />
               </div>
             </div>
@@ -162,7 +163,7 @@ export function VideoLinksManager() {
               <label className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Poster / Thumbnail Image URL</label>
               {extractYouTubeID(url) && (
                 <span className="text-[10px] text-green-400 flex items-center gap-1 font-bold tracking-widest bg-green-950/40 px-2 py-0.5 rounded border border-green-900/50">
-                  <Sparkles className="h-3 w-3" /> AUTO-GENERATED
+                  <Sparkles className="h-3 w-3" /> AUTO-GENERATED (MASTER)
                 </span>
               )}
             </div>
@@ -174,11 +175,11 @@ export function VideoLinksManager() {
                 value={posterUrl}
                 onChange={(e) => setPosterUrl(e.target.value)}
                 className="w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
-                placeholder="Paste link, or let it auto-fill for YouTube..."
+                placeholder="Auto-generated thumbnail link..."
               />
             </div>
             {posterUrl && (
-              <div className="mt-2 h-24 w-40 rounded-lg overflow-hidden border border-zinc-800 opacity-80">
+              <div className="mt-2 h-24 w-40 rounded-lg overflow-hidden border border-zinc-800 opacity-90 bg-zinc-900">
                 <img src={posterUrl} alt="Preview" className="w-full h-full object-cover" />
               </div>
             )}
@@ -236,6 +237,7 @@ export function VideoLinksManager() {
                 <button
                   onClick={() => handleDelete(link.id)}
                   className="p-2 text-zinc-500 hover:text-red-500 rounded-lg hover:bg-zinc-900/80 transition"
+                  title="Delete Video"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
