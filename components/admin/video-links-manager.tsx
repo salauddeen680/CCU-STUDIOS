@@ -21,10 +21,13 @@ export function VideoLinksManager() {
   const [posterUrl, setPosterUrl] = useState("")
   const [message, setMessage] = useState("")
 
-  // 📥 Video Links Fetch karne ke liye
+  // 📥 Video Links Fetch karne ke liye (Cache-Free)
   async function fetchLinks() {
     try {
-      const res = await fetch("/api/social-links")
+      // 🚀 FIX 1: Admin panel mein bhi Cache hataya taaki naya video add hote hi list mein dikhe
+      const res = await fetch(`/api/social-links?t=${new Date().getTime()}`, {
+        cache: "no-store"
+      })
       if (res.ok) {
         const data = await res.json()
         setLinks(data)
@@ -55,7 +58,6 @@ export function VideoLinksManager() {
     // Check agar YouTube link hai, toh automatically thumbnail set kar do
     const ytId = extractYouTubeID(newUrl)
     if (ytId) {
-      // 🛠️ PERMANENT FIX YAHAN HAI: maxresdefault hata kar hqdefault kar diya hai
       setPosterUrl(`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`)
     }
   }
@@ -78,7 +80,7 @@ export function VideoLinksManager() {
         setTitle("")
         setUrl("")
         setPosterUrl("") // Reset
-        fetchLinks()
+        fetchLinks() // List ko turant refresh karega
       } else {
         setMessage("Failed to add link. Check your API route.")
       }
@@ -94,12 +96,13 @@ export function VideoLinksManager() {
     if (!confirm("Are you sure you want to delete this video link?")) return
 
     try {
-      const res = await fetch(`/api/api/social-links?id=${id}`, {
+      // 🚀 FIX 2: Galat /api/api path ko theek kiya, ab delete perfect kaam karega
+      const res = await fetch(`/api/social-links?id=${id}`, {
         method: "DELETE",
       })
-      const fallbackRes = res.ok ? res : await fetch(`/api/social-links?id=${id}`, { method: "DELETE" })
       
-      if (fallbackRes.ok) {
+      if (res.ok) {
+        // Delete hone ke baad list se turant hata dega
         setLinks(links.filter((link) => link.id !== id))
       }
     } catch (error) {
@@ -146,7 +149,7 @@ export function VideoLinksManager() {
                   type="url"
                   required
                   value={url}
-                  onChange={handleUrlChange} // 🪄 Magic function yahan call ho raha hai
+                  onChange={handleUrlChange}
                   className="w-full rounded-lg border border-zinc-800 bg-zinc-950 pl-10 pr-4 py-2.5 text-sm text-white focus:border-red-600 focus:outline-none transition-all"
                   placeholder="https://youtube.com/watch?v=..."
                 />
