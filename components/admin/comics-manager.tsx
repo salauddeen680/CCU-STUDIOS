@@ -17,15 +17,32 @@ const generateCleanSlug = (text: string) => {
     .replace(/^-+|-+$/g, "");
 };
 
-// 🔍 Natural Numerical Sorting Utility for Files (e.g., page1, page2, page10)
+// 🔥 BULLETPROOF NATURAL SORTING (Dates/Timestamps ko ignore karke sirf page number nikalega)
 const sortFilesNaturally = (files: FileList | File[]): File[] => {
   const fileArray = Array.from(files);
   return fileArray.sort((a, b) => {
-    const extractNum = (name: string) => {
-      const match = name.match(/(\d+)/);
-      return match ? parseInt(match[1], 10) : Number.MAX_SAFE_INTEGER;
+    const getPageNum = (filename: string) => {
+      // Extension hatao
+      const cleanName = filename.replace(/\.[^/.]+$/, "");
+      // Agar filename mein 'page' ya 'p' ke baad number hai (jaise page_3, p3)
+      const matchPageWord = cleanName.match(/(?:page|p)[^\d]*(\d+)/i);
+      if (matchPageWord) return parseInt(matchPageWord[1], 10);
+
+      // Agar saare numbers nikalne par koi chhota number mile (jo saal 2026 na ho)
+      const allNumbers = cleanName.match(/\d+/g);
+      if (allNumbers) {
+        for (const numStr of allNumbers) {
+          const num = parseInt(numStr, 10);
+          // 4-digit numbers jo saal (jaise 2025, 2026) ho sakte hain, unhe chhod do
+          if (num < 1000) return num;
+        }
+        // Agar sabhi bade numbers hain toh sabse aakhri ya pehla chhota hissa lo
+        return parseInt(allNumbers[allNumbers.length - 1], 10) || 0;
+      }
+      return 0;
     };
-    return extractNum(a.name) - extractNum(b.name);
+
+    return getPageNum(a.name) - getPageNum(b.name);
   });
 };
 
@@ -64,7 +81,6 @@ export function ComicsManager() {
   const pagesInputRef = useRef<HTMLInputElement>(null);
   const editPagesInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper function to derive isPaid and freePages
   const getAccessValues = (type: "free" | "teaser_9" | "full_paid") => {
     switch (type) {
       case "teaser_9":
@@ -84,17 +100,15 @@ export function ComicsManager() {
     return "full_paid";
   };
 
-  // 📥 Imgbb Bulk Loop Pipeline for Creator with Natural Numerical Sorting
+  // 📥 Bulk Upload with Safe Numerical Sorting
   const handlePagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
     setPagesUploading(true);
-    
-    // 🔥 Android gallery ki random selection ko yahan Natural Sort kar denge
     const sortedFiles = sortFilesNaturally(files);
     const tempUrls: string[] = [];
-    setUploadProgress(`Processing 0/${sortedFiles.length} pages...`);
+    setUploadProgress(`Processing 0/${sortedFiles.length} pages in correct order...`);
 
     try {
       let count = 0;
@@ -116,7 +130,7 @@ export function ComicsManager() {
         }
       }
       setPageUrls((prev) => [...prev, ...tempUrls]);
-      setUploadProgress("All pages uploaded successfully in correct order!");
+      setUploadProgress("All pages uploaded successfully in exact order!");
     } catch (err) {
       console.error(err);
       alert("Kuch pages uploads fail ho gaye bhai.");
@@ -125,7 +139,6 @@ export function ComicsManager() {
     }
   };
 
-  // 💾 NEW COMIC: Direct Clean Slug Document ID Lock
   const handleSaveComic = async () => {
     if (!title.trim() || !description.trim()) {
       alert("Title aur Description dena zaroori hai bhai!");
@@ -136,7 +149,6 @@ export function ComicsManager() {
       const { isPaid, freePages } = getAccessValues(accessType);
       const generatedSlug = generateCleanSlug(title);
 
-      // 🔥 Random ID hatakar title slug se document banega
       const comicRef = doc(db, "comics", generatedSlug);
       await setDoc(comicRef, {
         id: generatedSlug,
@@ -167,7 +179,6 @@ export function ComicsManager() {
     } 
   };
 
-  // ✏️ Setup Editor values when clicking Edit
   const startEditing = (comic: any) => {
     setEditingComicId(comic.id);
     setEditTitle(comic.title || "");
@@ -180,7 +191,6 @@ export function ComicsManager() {
     setEditPublishStatus(comic.publishStatus || "published"); 
   };
 
-  // 💾 Update API Handler
   const handleUpdateComic = async () => {
     if (!editingComicId) return;
     if (!editTitle.trim() || !editDescription.trim()) {
@@ -279,10 +289,10 @@ export function ComicsManager() {
             <label className="text-xs font-semibold text-zinc-400 uppercase">Comic pages ({pageUrls.length})</label>
             <input type="file" accept="image/*" multiple ref={pagesInputRef} className="hidden" onChange={handlePagesUpload} />
             <button type="button" onClick={() => pagesInputRef.current?.click()} disabled={pagesUploading} className="w-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 bg-zinc-950 p-6 rounded-lg text-xs text-zinc-400">
-              {pagesUploading ? <Loader2 className="h-5 w-5 animate-spin text-red-500" /> : `Upload Comic Pages Bulk (Naturally Sorted)`}
+              {pagesUploading ? <Loader2 className="h-5 w-5 animate-spin text-red-500" /> : `Upload Comic Pages (Smart Sorted)`}
             </button>
             {pagesUploading && <p className="text-xs text-zinc-500">{uploadProgress}</p>}
-            {pageUrls.length > 0 && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages ready in order!</p>}
+            {pageUrls.length > 0 && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages sorted and ready!</p>}
           </div>
 
           <button onClick={handleSaveComic} disabled={isSaving || pagesUploading} className="w-full bg-red-600 text-white text-xs font-bold py-3 rounded-lg uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-red-700">
