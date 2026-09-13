@@ -23,6 +23,21 @@ export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number
     return "Free Full Comic"
   }
 
+  // 🔥 MAGIC LOGIC: Date nikalne ka tareeka (CreatedAt se)
+  let displayDate = "";
+  const rawDate: any = item.releaseDate || (item as any).createdAt || (item as any).date;
+  
+  if (rawDate) {
+    if (typeof rawDate === "string") {
+      displayDate = rawDate;
+    } else if (rawDate.seconds) {
+      // Firebase Timestamp
+      displayDate = new Date(rawDate.seconds * 1000).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    } else {
+      displayDate = new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+  }
+
   // Pehle 4 cards ko turant bina wait kiye load karega
   const isPriority = index < 4
 
@@ -38,7 +53,6 @@ export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number
         className="hover-glow group block overflow-hidden rounded-lg border border-zinc-800 bg-[#111] transition-all"
       >
         <div className="relative aspect-[2/3] w-full overflow-hidden bg-zinc-900">
-          {/* 🔥 NEXT.JS ULTRA-FAST COMPRESSED IMAGE */}
           <Image
             src={image || "/placeholder.svg?height=400&width=300&query=cinematic%20comic%20cover"}
             alt={title || "Comic Cover"}
@@ -57,7 +71,6 @@ export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number
           )}
         </div>
         
-        {/* 📋 CARD DETAILED BLOCK */}
         <div className="p-3">
           {isComic ? (
             <>
@@ -72,15 +85,14 @@ export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number
               
               <h3 className="text-white font-bold text-sm uppercase truncate">{title}</h3>
               
-              {/* 🔥 FIX: Pages aur uske theek niche Release Date */}
               <p className="text-gray-500 text-xs mt-1">
                 {item.images?.length || 0} Pages
               </p>
               
-              {/* Agar Date database mein hai, toh wo pages ke niche mast chote size mein dikhegi */}
-              {(item.releaseDate || (item as any).date) && (
-                <p className="text-zinc-400 text-[10px] font-semibold uppercase mt-0.5 tracking-wider">
-                  {item.releaseDate || (item as any).date}
+              {/* 🔥 RELEASE DATE DISPLAY */}
+              {displayDate && (
+                <p className="text-zinc-400 text-[10.5px] font-bold uppercase mt-1 tracking-wider">
+                  Released: {displayDate}
                 </p>
               )}
             </>
