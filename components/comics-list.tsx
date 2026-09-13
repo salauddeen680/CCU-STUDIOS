@@ -6,22 +6,36 @@ import { VaultCard } from "./vault-card"
 import { GridSkeleton } from "./skeletons"
 import { Sparkles, Clock } from "lucide-react"
 
-export function ComicsList() {
+// 🚀 NAYA FIX: Humne 'showUltimateOnly' naam ka ek switch add kiya hai
+export function ComicsList({ showUltimateOnly = false }: { showUltimateOnly?: boolean }) {
   const { comics = [], loading } = useComics()
   const [activeTab, setActiveTab] = useState<"published" | "upcoming">("published")
 
   if (loading) return <GridSkeleton count={8} />
 
-  // Separate Live (Published) and Upcoming Comics
-  const publishedComics = comics.filter(
-    (c) => !c.publishStatus || c.publishStatus === "published"
+  // 🔥 1. ULTIMATE COMICS FILTER LOGIC
+  const displayComics = comics.filter((c: any) => {
+    // Database mein check karega ki comic ultimate hai ya nahi
+    // Aapke Firebase mein jo bhi naam ho (category, type, ya isUltimate), yeh usko pakad lega
+    const isUltimate = c.category === "ultimate" || c.type === "ultimate" || c.isUltimate === true;
+    
+    if (showUltimateOnly) {
+      return isUltimate; // Agar switch ON hai, toh SIRF Ultimate dikhayega
+    } else {
+      return !isUltimate; // Agar switch OFF hai, toh Ultimate ko chhod kar BAAKI SAB dikhayega
+    }
+  })
+
+  // 2. Separate Live (Published) and Upcoming Comics (Ab yeh naye filter hue data par chalega)
+  const publishedComics = displayComics.filter(
+    (c: any) => !c.publishStatus || c.publishStatus === "published"
   )
-  const upcomingComics = comics.filter((c) => c.publishStatus === "upcoming")
+  const upcomingComics = displayComics.filter((c: any) => c.publishStatus === "upcoming")
 
   const currentList = activeTab === "published" ? publishedComics : upcomingComics
 
   // 🔥 SMART GROUPING LOGIC (Series-wise grouping)
-  const groupedComics = currentList.reduce((groups, comic) => {
+  const groupedComics = currentList.reduce((groups: any, comic: any) => {
     let titleUpper = comic.title.toUpperCase()
     let seriesName = "OTHER COMICS"
 
@@ -40,7 +54,7 @@ export function ComicsList() {
     }
     groups[seriesName].push(comic)
     return groups
-  }, {} as Record<string, typeof comics>)
+  }, {})
 
   return (
     <div className="space-y-8">
@@ -81,7 +95,7 @@ export function ComicsList() {
       ) : (
         /* 🔵 HORIZONTAL SCROLLING ROWS (IC STUDIO STYLE) */
         <div className="space-y-10 mt-6">
-          {Object.entries(groupedComics).map(([seriesName, seriesComics]) => (
+          {Object.entries(groupedComics).map(([seriesName, seriesComics]: [string, any]) => (
             <div key={seriesName} className="space-y-3">
               
               {/* Series Heading */}
@@ -91,10 +105,10 @@ export function ComicsList() {
               
               {/* Horizontal Scroll Container (Side-by-side compact cards) */}
               <div className="flex overflow-x-auto gap-4 pb-4 pt-1 no-scrollbar scroll-smooth">
-                {seriesComics.map((c, i) => (
+                {seriesComics.map((c: any, i: number) => (
                   <div key={c.id} className="relative group w-[150px] sm:w-[180px] flex-shrink-0">
                     
-                    {/* 🚀 NAYA FIX: Release Date Badge (Top-Left corner par dikhega) */}
+                    {/* Release Date Badge (Top-Left corner par dikhega) */}
                     {(c.releaseDate || c.date) && (
                       <div className="absolute top-2 left-2 z-20 rounded bg-black/80 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-zinc-300 backdrop-blur-sm border border-zinc-700/60 shadow-md">
                         {c.releaseDate || c.date}
