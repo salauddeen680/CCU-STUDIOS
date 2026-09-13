@@ -8,26 +8,34 @@ import { GridSkeleton } from "./skeletons"
 export function UltimateList() {
   const { comics = [], loading } = useComics()
   
-  // Sirf wahi comics filter hongi jo Ultimate hain
-  const ultimateComics = comics.filter((c) => c.ultimate)
+  // 🔥 FIX: Ab yeh Admin panel ke 'timeline' ko padhega
+  const ultimateComics = comics.filter((c: any) => {
+    const timelineData = String(c.timeline || "").toLowerCase();
+    return (
+      c.ultimate || // Purana system (agar ho)
+      timelineData.includes("purani") || 
+      timelineData.includes("dusri") ||
+      timelineData.includes("ultimate")
+    );
+  })
 
   if (loading) return <GridSkeleton count={4} />
 
   if (ultimateComics.length === 0)
     return (
-      <div className="rounded-2xl border border-dashed border-gold/30 bg-card/50 py-16 text-center">
-        <p className="font-display text-lg text-gold">No Ultimate chapters yet</p>
-        <p className="mt-1 text-sm text-muted">
-          Mark a comic as &quot;Ultimate&quot; in the admin panel to feature it here.
+      <div className="rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/50 py-16 text-center">
+        <p className="font-display text-lg text-red-500">No Ultimate chapters yet</p>
+        <p className="mt-1 text-sm text-zinc-400">
+          Select "Purani Timeline" or "Dusri Universe" in the admin panel to feature it here.
         </p>
-        <Link href="/comics" className="mt-3 inline-block text-sm text-primary underline">
+        <Link href="/comics" className="mt-3 inline-block text-sm text-red-500 underline">
           Browse all comics
         </Link>
       </div>
     )
 
-  // 🔥 EXACT SMART GROUPING LOGIC (ComicsList ki tarah series-wise group karega)
-  const groupedComics = ultimateComics.reduce((groups, comic) => {
+  // 🔥 EXACT SMART GROUPING LOGIC
+  const groupedComics = ultimateComics.reduce((groups: any, comic: any) => {
     let titleUpper = comic.title.toUpperCase()
     let seriesName = "ULTIMATE SERIES"
 
@@ -46,11 +54,11 @@ export function UltimateList() {
     }
     groups[seriesName].push(comic)
     return groups
-  }, {} as Record<string, typeof comics>)
+  }, {})
 
   return (
     <div className="space-y-10 mt-6">
-      {Object.entries(groupedComics).map(([seriesName, seriesComics]) => (
+      {Object.entries(groupedComics).map(([seriesName, seriesComics]: [string, any]) => (
         <div key={seriesName} className="space-y-3">
           
           {/* Series Heading */}
@@ -58,9 +66,9 @@ export function UltimateList() {
             {seriesName}
           </h2>
           
-          {/* 🔥 HORIZONTAL SCROLLING ROWS (ComicsList style side-by-side compact cards) */}
+          {/* 🔥 HORIZONTAL SCROLLING ROWS */}
           <div className="flex overflow-x-auto gap-4 pb-4 pt-1 no-scrollbar scroll-smooth">
-            {seriesComics.map((c, i) => (
+            {seriesComics.map((c: any, i: number) => (
               <div key={c.id} className="relative group w-[150px] sm:w-[180px] flex-shrink-0">
                 {/* Yellow Badge */}
                 <div className="absolute top-2 right-2 z-20 rounded bg-yellow-400 px-2 py-0.5 text-[10px] font-black uppercase text-black shadow-md">
