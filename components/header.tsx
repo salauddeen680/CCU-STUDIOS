@@ -124,8 +124,9 @@ export function Header() {
 
         {/* Right Section: Desktop Auth & Search */}
         <div className="hidden md:flex items-center gap-3">
+          {/* 🔥 FIX: Changed href from "/comics" to "/search" */}
           <Link 
-            href="/comics"
+            href="/search"
             className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-colors"
           >
             <Search className="h-4 w-4" />
@@ -168,8 +169,9 @@ export function Header() {
 
         {/* Mobile Buttons */}
         <div className="flex items-center gap-2 md:hidden">
+          {/* 🔥 FIX: Changed href from "/comics" to "/search" */}
           <Link 
-            href="/comics"
+            href="/search"
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-zinc-300"
           >
             <Search className="h-4 w-4" />
