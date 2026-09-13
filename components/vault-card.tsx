@@ -72,9 +72,17 @@ export function VaultCard({ item, index = 0 }: { item: VaultItem; index?: number
               
               <h3 className="text-white font-bold text-sm uppercase truncate">{title}</h3>
               
+              {/* 🔥 FIX: Pages aur uske theek niche Release Date */}
               <p className="text-gray-500 text-xs mt-1">
-                {item.releaseDate ? item.releaseDate : `${item.images?.length || 0} Pages`}
+                {item.images?.length || 0} Pages
               </p>
+              
+              {/* Agar Date database mein hai, toh wo pages ke niche mast chote size mein dikhegi */}
+              {(item.releaseDate || (item as any).date) && (
+                <p className="text-zinc-400 text-[10px] font-semibold uppercase mt-0.5 tracking-wider">
+                  {item.releaseDate || (item as any).date}
+                </p>
+              )}
             </>
           ) : (
             <>
