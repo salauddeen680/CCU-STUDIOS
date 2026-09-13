@@ -14,11 +14,14 @@ import {
   LogIn, 
   LogOut, 
   UserCircle,
-  Search
+  Search,
+  Zap
 } from "lucide-react"
 import { auth } from "@/lib/firebase"
 import { GoogleAuthProvider, signInWithPopup, signInWithCredential, signOut, onAuthStateChanged, User } from "firebase/auth"
-import { useComics } from "@/lib/data" // 🔥 LIVE SEARCH KE LIYE DATA IMPORT
+
+// 🔥 DONO DATA HOOKS IMPORT KIYE HAIN TAAPI SAB KUCH SEARCH HO SAKE
+import { useComics, useCharacters } from "@/lib/data" 
 
 export function Header() {
   const pathname = usePathname()
@@ -27,12 +30,13 @@ export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isLoggingIn, setIsLoggingIn] = useState(false)
   
-  // 🔥 SEARCH STATE
+  // 🔍 SEARCH STATES
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   
-  // 🔥 GET COMICS FOR LIVE RESULTS
+  // 📥 DATABASE SE COMICS AUR CHARACTERS DONO MANGWAYE HAIN
   const { comics = [] } = useComics()
+  const { characters = [] } = useCharacters() 
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -66,16 +70,11 @@ export function Header() {
         await signInWithCredential(auth, credential);
       } else {
         const provider = new GoogleAuthProvider()
-        provider.setCustomParameters({
-          prompt: "select_account",
-        })
+        provider.setCustomParameters({ prompt: "select_account" })
         await signInWithPopup(auth, provider)
       }
     } catch (error: any) {
       console.error("Login Error:", error)
-      if (error?.code !== "auth/popup-closed-by-user") {
-        alert("Login failed: " + (error?.message || "Please check connection"))
-      }
     } finally {
       setIsLoggingIn(false)
     }
@@ -89,14 +88,33 @@ export function Header() {
     }
   }
 
-  // 🔥 LIVE SEARCH FILTER LOGIC
-  const searchResults = comics
-    .filter((c) => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    .slice(0, 5) // Top 5 results dikhayega taaki design kharab na ho
+  // 🧠 UNIVERSAL SEARCH ALGORITHM (Comics + Characters Mix)
+  const allSearchableItems = [
+    ...comics.map(c => ({
+      id: c.id,
+      title: c.title,
+      image: c.cover || (c.images && c.images[0]) || "",
+      type: "Comic",
+      badgeColor: "bg-red-600",
+      href: `/comics/${c.slug || c.id}`
+    })),
+    ...characters.map(c => ({
+      id: c.id,
+      title: c.name,
+      image: c.image || "",
+      type: "Character",
+      badgeColor: "bg-blue-600",
+      href: `/characters/${c.slug || c.id}`
+    }))
+  ]
+
+  // Type hone par filter karega aur top 6 results dikhayega
+  const searchResults = allSearchableItems
+    .filter(item => item.title?.toLowerCase().includes(searchQuery.toLowerCase().trim()))
+    .slice(0, 6) 
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/80 backdrop-blur-2xl transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
-      {/* MAIN HEADER ROW */}
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         
         <Link href="/" className="flex items-center gap-2.5 focus:outline-none group">
@@ -113,13 +131,7 @@ export function Header() {
           {navLinks.map((link) => {
             const isActive = pathname === link.href || pathname.startsWith(`${link.href}/`)
             return (
-              <Link
-                key={link.name}
-                href={link.href}
-                className={`font-display text-xs font-bold uppercase tracking-widest transition-colors ${
-                  isActive ? "text-red-500" : "text-zinc-300 hover:text-white"
-                }`}
-              >
+              <Link key={link.name} href={link.href} className={`font-display text-xs font-bold uppercase tracking-widest transition-colors ${isActive ? "text-red-500" : "text-zinc-300 hover:text-white"}`}>
                 {link.name}
               </Link>
             )
@@ -129,13 +141,8 @@ export function Header() {
         {/* Right Section: Desktop Auth & Search */}
         <div className="hidden md:flex items-center gap-3">
           <button 
-            onClick={() => {
-              setIsSearchOpen(!isSearchOpen)
-              if (!isSearchOpen) setSearchQuery("")
-            }}
-            className={`grid h-9 w-9 place-items-center rounded-lg border transition-colors ${
-              isSearchOpen ? "bg-red-600 border-red-500 text-white" : "border-white/10 bg-white/5 text-zinc-300 hover:text-white"
-            }`}
+            onClick={() => { setIsSearchOpen(!isSearchOpen); setSearchQuery(""); }}
+            className={`grid h-9 w-9 place-items-center rounded-lg border transition-colors ${isSearchOpen ? "bg-red-600 border-red-500 text-white" : "border-white/10 bg-white/5 text-zinc-300 hover:text-white"}`}
           >
             {isSearchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
           </button>
@@ -148,23 +155,14 @@ export function Header() {
                 ) : (
                   <UserCircle className="h-4 w-4 text-zinc-400" />
                 )}
-                <span className="text-xs font-bold text-zinc-200 max-w-[100px] truncate">
-                  {user.displayName?.split(" ")[0] || "User"}
-                </span>
+                <span className="text-xs font-bold text-zinc-200 max-w-[100px] truncate">{user.displayName?.split(" ")[0] || "User"}</span>
               </div>
-              <button
-                onClick={handleLogout}
-                className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 hover:text-red-500 transition-colors"
-              >
+              <button onClick={handleLogout} className="grid h-8 w-8 place-items-center rounded-lg border border-white/10 bg-white/5 text-zinc-400 hover:text-red-500 transition-colors">
                 <LogOut className="h-3.5 w-3.5" />
               </button>
             </div>
           ) : (
-            <button
-              onClick={handleGoogleLogin}
-              disabled={isLoggingIn}
-              className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(220,38,38,0.4)] transition hover:bg-red-500 active:scale-95 disabled:opacity-50"
-            >
+            <button onClick={handleGoogleLogin} disabled={isLoggingIn} className="flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(220,38,38,0.4)] transition hover:bg-red-500 active:scale-95 disabled:opacity-50">
               <LogIn className="h-3.5 w-3.5" />
               {isLoggingIn ? "Connecting..." : "Login"}
             </button>
@@ -174,71 +172,80 @@ export function Header() {
         {/* Mobile Buttons */}
         <div className="flex items-center gap-2 md:hidden">
           <button 
-            onClick={() => {
-              setIsSearchOpen(!isSearchOpen)
-              if (!isSearchOpen) setSearchQuery("")
-            }}
-            className={`grid h-10 w-10 place-items-center rounded-xl border transition-colors ${
-              isSearchOpen ? "bg-red-600 border-red-500 text-white" : "border-white/10 bg-white/5 text-zinc-300"
-            }`}
+            onClick={() => { setIsSearchOpen(!isSearchOpen); setSearchQuery(""); }}
+            className={`grid h-10 w-10 place-items-center rounded-xl border transition-colors ${isSearchOpen ? "bg-red-600 border-red-500 text-white" : "border-white/10 bg-white/5 text-zinc-300"}`}
           >
             {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
           </button>
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white backdrop-blur focus:outline-none"
-          >
+          <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white backdrop-blur focus:outline-none">
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
-      {/* 🚀 INLINE LIVE SEARCH PANEL (Header ke andar hi khulega bina background chupaye) */}
+      {/* 🚀 SUPER-FAST UNIVERSAL LIVE SEARCH BAR */}
       <AnimatePresence>
         {isSearchOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-t border-white/10 bg-zinc-950/95 backdrop-blur-2xl overflow-hidden"
+            className="border-t border-white/10 bg-zinc-950/95 backdrop-blur-2xl overflow-hidden shadow-2xl"
           >
-            <div className="mx-auto max-w-3xl px-4 py-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-zinc-400" />
+            <div className="mx-auto max-w-3xl px-4 py-5">
+              <div className="relative flex items-center">
+                <Search className="absolute left-4 h-5 w-5 text-red-500" />
                 <input 
                   autoFocus
                   type="text"
-                  placeholder="Type to search comics instantly..."
+                  placeholder="Search comics, characters, or heroes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700 rounded-xl py-3 pl-10 pr-4 text-white focus:border-red-500 focus:outline-none shadow-inner"
+                  className="w-full bg-zinc-900/80 border border-zinc-700 rounded-xl py-3.5 pl-12 pr-4 text-white text-sm font-medium focus:border-red-500 focus:outline-none shadow-inner transition-all placeholder:text-zinc-500"
                 />
+                {searchQuery && (
+                  <button onClick={() => setSearchQuery("")} className="absolute right-4 text-zinc-500 hover:text-white">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
 
-              {/* ⚡ LIVE RESULTS DROPDOWN LIST */}
+              {/* ⚡ OPTIMIZED FAST-LOADING RESULTS */}
               {searchQuery.trim().length > 0 && (
                 <div className="mt-4 flex flex-col gap-2 pb-2">
                   {searchResults.length > 0 ? (
-                    searchResults.map(comic => (
+                    searchResults.map(item => (
                       <Link 
-                        key={comic.id} 
-                        href={`/comics/${comic.slug || comic.id}`}
+                        key={`${item.type}-${item.id}`} 
+                        href={item.href}
                         onClick={() => { setIsSearchOpen(false); setSearchQuery(""); }}
-                        className="flex items-center gap-4 p-2 hover:bg-zinc-800/80 rounded-lg transition-colors border border-transparent hover:border-zinc-700"
+                        className="flex items-center gap-4 p-2.5 bg-zinc-900/40 hover:bg-zinc-800 rounded-xl transition-all border border-transparent hover:border-zinc-700 group"
                       >
-                        <img 
-                          src={comic.cover || "/placeholder.svg"} 
-                          alt={comic.title}
-                          className="w-10 h-14 object-cover rounded shadow-md" 
-                        />
-                        <div>
-                          <p className="text-sm font-bold text-white uppercase tracking-wide">{comic.title}</p>
-                          <p className="text-[10px] text-zinc-400 uppercase mt-0.5">{comic.timeline || "Comic"}</p>
+                        <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded bg-zinc-900 shadow-md">
+                          {/* loading="lazy" aur decoding="async" lagaya gaya hai image delay hatane ke liye */}
+                          <img 
+                            src={item.image || "/placeholder.svg"} 
+                            alt={item.title}
+                            loading="lazy"
+                            decoding="async"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-110" 
+                          />
                         </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-black text-white uppercase tracking-wide group-hover:text-red-400 transition-colors">{item.title}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider text-white ${item.badgeColor}`}>
+                              {item.type}
+                            </span>
+                          </div>
+                        </div>
+                        <Zap className="h-4 w-4 text-zinc-600 group-hover:text-red-500 transition-colors mr-2 opacity-0 group-hover:opacity-100" />
                       </Link>
                     ))
                   ) : (
-                    <p className="text-sm text-zinc-500 text-center py-4">No matching comics found for "{searchQuery}"</p>
+                    <div className="py-8 text-center bg-zinc-900/30 rounded-xl border border-dashed border-zinc-800 mt-2">
+                      <p className="text-sm font-medium text-zinc-400">No results found for <span className="text-white">"{searchQuery}"</span></p>
+                    </div>
                   )}
                 </div>
               )}
@@ -256,7 +263,6 @@ export function Header() {
             exit={{ opacity: 0, height: 0 }}
             className="border-b border-white/10 bg-black/80 backdrop-blur-3xl px-6 py-6 md:hidden"
           >
-            {/* Same Mobile Menu Content (No Changes Here) */}
             <div className="flex flex-col gap-5">
               {navLinks.map((link) => {
                 const Icon = link.icon
@@ -266,9 +272,7 @@ export function Header() {
                     key={link.name}
                     href={link.href}
                     onClick={() => setMobileMenuOpen(false)}
-                    className={`flex items-center gap-3.5 font-display text-base font-bold uppercase tracking-wider ${
-                      isActive ? "text-red-500" : "text-zinc-200"
-                    }`}
+                    className={`flex items-center gap-3.5 font-display text-base font-bold uppercase tracking-wider ${isActive ? "text-red-500" : "text-zinc-200"}`}
                   >
                     <Icon className="h-5 w-5" />
                     {link.name}
@@ -297,7 +301,7 @@ export function Header() {
                 ) : (
                   <button onClick={() => { setMobileMenuOpen(false); handleGoogleLogin(); }} disabled={isLoggingIn} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-3 font-display text-sm font-bold uppercase tracking-wider text-white shadow-[0_0_20px_rgba(220,38,38,0.4)] active:scale-95">
                     <LogIn className="h-4 w-4" />
-                    {isLoggingIn ? "Connecting..." : "Sign In With Google"}
+                    {isLoggingIn ? "Connecting..." : "Sign In"}
                   </button>
                 )}
               </div>
@@ -308,3 +312,4 @@ export function Header() {
     </header>
   )
 }
+
