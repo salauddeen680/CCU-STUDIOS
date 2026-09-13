@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Trash2, Loader2, Upload, CheckCircle2, X, Edit2, Lock, BookOpen, Clock } from "lucide-react";
+import { Plus, Trash2, Loader2, Upload, CheckCircle2, X, Edit2, Lock, BookOpen, Clock, FileText } from "lucide-react";
 import { useComics, deleteComic } from "@/lib/data";
 import { ImageUploader } from "./image-uploader";
 import { db } from "@/lib/firebase";
@@ -17,26 +17,21 @@ const generateCleanSlug = (text: string) => {
     .replace(/^-+|-+$/g, "");
 };
 
-// 🔥 BULLETPROOF NATURAL SORTING (Dates/Timestamps ko ignore karke sirf page number nikalega)
+// 🔥 BULLETPROOF NATURAL SORTING FOR IMAGES
 const sortFilesNaturally = (files: FileList | File[]): File[] => {
   const fileArray = Array.from(files);
   return fileArray.sort((a, b) => {
     const getPageNum = (filename: string) => {
-      // Extension hatao
       const cleanName = filename.replace(/\.[^/.]+$/, "");
-      // Agar filename mein 'page' ya 'p' ke baad number hai (jaise page_3, p3)
       const matchPageWord = cleanName.match(/(?:page|p)[^\d]*(\d+)/i);
       if (matchPageWord) return parseInt(matchPageWord[1], 10);
 
-      // Agar saare numbers nikalne par koi chhota number mile (jo saal 2026 na ho)
       const allNumbers = cleanName.match(/\d+/g);
       if (allNumbers) {
         for (const numStr of allNumbers) {
           const num = parseInt(numStr, 10);
-          // 4-digit numbers jo saal (jaise 2025, 2026) ho sakte hain, unhe chhod do
           if (num < 1000) return num;
         }
-        // Agar sabhi bade numbers hain toh sabse aakhri ya pehla chhota hissa lo
         return parseInt(allNumbers[allNumbers.length - 1], 10) || 0;
       }
       return 0;
@@ -44,6 +39,49 @@ const sortFilesNaturally = (files: FileList | File[]): File[] => {
 
     return getPageNum(a.name) - getPageNum(b.name);
   });
+};
+
+// 📄 PDF TO IMAGES CONVERTER (Browser-side dynamic PDF.js loader)
+const convertPdfToImages = async (pdfFile: File, onProgress: (msg: string) => void): Promise<File[]> => {
+  onProgress("Loading PDF parser engine...");
+  if (!(window as any).pdfjsLib) {
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+      script.onload = () => {
+        (window as any).pdfjsLib.GlobalWorkerOptions.workerSrc = 
+          "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        resolve(true);
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
+  }
+
+  const pdfjsLib = (window as any).pdfjsLib;
+  const arrayBuffer = await pdfFile.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdfDoc = await loadingTask.promise;
+  const numPages = pdfDoc.numPages;
+  const imageFiles: File[] = [];
+
+  for (let i = 1; i <= numPages; i++) {
+    onProgress(`Extracting page ${i} of ${numPages} from PDF...`);
+    const page = await pdfDoc.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 }); // High quality render
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+
+    await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+    const blob: Blob = await new Promise((resolve) => canvas.toBlob((b) => resolve(b!), "image/png"));
+    const pageFile = new File([blob], `page_${i}.png`, { type: "image/png" });
+    imageFiles.push(pageFile);
+  }
+
+  return imageFiles;
 };
 
 export function ComicsManager() {
@@ -79,6 +117,7 @@ export function ComicsManager() {
   const [editPublishStatus, setEditPublishStatus] = useState("published");
 
   const pagesInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const editPagesInputRef = useRef<HTMLInputElement>(null);
 
   const getAccessValues = (type: "free" | "teaser_9" | "full_paid") => {
@@ -100,7 +139,7 @@ export function ComicsManager() {
     return "full_paid";
   };
 
-  // 📥 Bulk Upload with Safe Numerical Sorting
+  // 📥 Bulk Upload Images with Safe Numerical Sorting
   const handlePagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -108,7 +147,7 @@ export function ComicsManager() {
     setPagesUploading(true);
     const sortedFiles = sortFilesNaturally(files);
     const tempUrls: string[] = [];
-    setUploadProgress(`Processing 0/${sortedFiles.length} pages in correct order...`);
+    setUploadProgress(`Processing 0/${sortedFiles.length} pages...`);
 
     try {
       let count = 0;
@@ -134,6 +173,46 @@ export function ComicsManager() {
     } catch (err) {
       console.error(err);
       alert("Kuch pages uploads fail ho gaye bhai.");
+    } finally {
+      setPagesUploading(false);
+    }
+  };
+
+  // 📄 Handle Direct PDF Upload & Auto-Extraction
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setPagesUploading(true);
+    try {
+      // Convert PDF pages to structured image files automatically in correct 1,2,3 order
+      const extractedFiles = await convertPdfToImages(file, (msg) => setUploadProgress(msg));
+      
+      const tempUrls: string[] = [];
+      let count = 0;
+      for (const imgFile of extractedFiles) {
+        count++;
+        setUploadProgress(`Uploading PDF Page ${count}/${extractedFiles.length}...`);
+        const formData = new FormData();
+        formData.append("image", imgFile);
+
+        const res = await fetch("https://api.imgbb.com/1/upload?key=316329635816225ced11f24f7cb154d3", {
+          method: "POST",
+          body: formData,
+        });
+        const resData = await res.json();
+        if (resData.success) {
+          tempUrls.push(resData.data.url);
+        } else {
+          throw new Error(`Failed at PDF page ${count}`);
+        }
+      }
+
+      setPageUrls((prev) => [...prev, ...tempUrls]);
+      setUploadProgress("PDF successfully converted & uploaded in perfect sequence!");
+    } catch (err) {
+      console.error(err);
+      alert("PDF processing ya upload mein error aa gaya bhai.");
     } finally {
       setPagesUploading(false);
     }
@@ -285,14 +364,26 @@ export function ComicsManager() {
           <ImageUploader label="Cover Image" folder="covers" onUploadComplete={(url) => setCoverUrl(url)} />
           {coverUrl && <img src={coverUrl} alt="Cover Preview" className="mt-2 h-32 w-24 object-cover rounded-lg border border-zinc-800" />}
 
-          <div className="space-y-2">
-            <label className="text-xs font-semibold text-zinc-400 uppercase">Comic pages ({pageUrls.length})</label>
-            <input type="file" accept="image/*" multiple ref={pagesInputRef} className="hidden" onChange={handlePagesUpload} />
-            <button type="button" onClick={() => pagesInputRef.current?.click()} disabled={pagesUploading} className="w-full flex flex-col items-center justify-center border-2 border-dashed border-zinc-800 bg-zinc-950 p-6 rounded-lg text-xs text-zinc-400">
-              {pagesUploading ? <Loader2 className="h-5 w-5 animate-spin text-red-500" /> : `Upload Comic Pages (Smart Sorted)`}
-            </button>
-            {pagesUploading && <p className="text-xs text-zinc-500">{uploadProgress}</p>}
-            {pageUrls.length > 0 && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages sorted and ready!</p>}
+          {/* 📂 DUAL UPLOAD OPTIONS: Images or PDF */}
+          <div className="space-y-3 pt-2 border-t border-zinc-800">
+            <label className="text-xs font-semibold text-zinc-400 uppercase">Comic Pages Upload ({pageUrls.length} ready)</label>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Option 1: Gallery Images */}
+              <input type="file" accept="image/*" multiple ref={pagesInputRef} className="hidden" onChange={handlePagesUpload} />
+              <button type="button" onClick={() => pagesInputRef.current?.click()} disabled={pagesUploading} className="flex items-center justify-center gap-2 border border-zinc-700 bg-zinc-950 hover:bg-zinc-900 p-3 rounded-lg text-xs font-bold text-white transition-all">
+                <Upload className="h-4 w-4 text-red-500" /> Select Gallery Images
+              </button>
+
+              {/* Option 2: Direct PDF Upload */}
+              <input type="file" accept="application/pdf" ref={pdfInputRef} className="hidden" onChange={handlePdfUpload} />
+              <button type="button" onClick={() => pdfInputRef.current?.click()} disabled={pagesUploading} className="flex items-center justify-center gap-2 border border-zinc-700 bg-zinc-950 hover:bg-zinc-900 p-3 rounded-lg text-xs font-bold text-white transition-all">
+                <FileText className="h-4 w-4 text-blue-500" /> Upload PDF Chapter (Auto)
+              </button>
+            </div>
+
+            {pagesUploading && <p className="text-xs text-yellow-500 animate-pulse font-medium">{uploadProgress}</p>}
+            {pageUrls.length > 0 && <p className="text-xs text-green-500 flex items-center gap-1"><CheckCircle2 className="h-3 w-3" /> {pageUrls.length} pages structured and ready in sequence!</p>}
           </div>
 
           <button onClick={handleSaveComic} disabled={isSaving || pagesUploading} className="w-full bg-red-600 text-white text-xs font-bold py-3 rounded-lg uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-red-700">
