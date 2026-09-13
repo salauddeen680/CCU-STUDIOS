@@ -42,11 +42,9 @@ export function Header() {
     if (isLoggingIn) return
     setIsLoggingIn(true)
     try {
-      // Safe check for Android Native App vs Web Vercel build
       const cap = (typeof window !== 'undefined' && (window as any).Capacitor) ? (window as any).Capacitor : null;
 
       if (cap && cap.isNativePlatform() && cap.Plugins?.GoogleAuth) {
-        // 🔥 NATIVE 1-TAP LOGIN FOR ANDROID APP
         const GoogleAuth = cap.Plugins.GoogleAuth;
         await GoogleAuth.initialize({
           clientId: '359808133294-vk1bc10b7uolubjkv4nebim9f2p74ebn.apps.googleusercontent.com',
@@ -58,7 +56,6 @@ export function Header() {
         const credential = GoogleAuthProvider.credential(googleUser.authentication.idToken);
         await signInWithCredential(auth, credential);
       } else {
-        // 🌐 WEB LOGIN (Vercel Browser)
         const provider = new GoogleAuthProvider()
         provider.setCustomParameters({
           prompt: "select_account",
@@ -83,11 +80,15 @@ export function Header() {
     }
   }
 
+  // 🔍 Temporary Search Click Handler
+  const handleSearchClick = () => {
+    alert("Search functionality is coming soon!")
+  }
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/10 bg-black/30 backdrop-blur-2xl transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         
-        {/* 🎬 ORIGINAL MARVEL BADGE STYLE LOGO */}
         <Link href="/" className="flex items-center gap-2.5 focus:outline-none group">
           <div className="relative h-8 w-11 sm:h-9 sm:w-12 shrink-0 overflow-hidden rounded-md border border-red-500/50 shadow-[0_0_12px_rgba(220,38,38,0.4)]">
             <Image
@@ -124,13 +125,13 @@ export function Header() {
 
         {/* Right Section: Desktop Auth & Search */}
         <div className="hidden md:flex items-center gap-3">
-          {/* 🔥 FIX: Changed href from "/comics" to "/search" */}
-          <Link 
-            href="/search"
+          {/* 🔥 FIX: Changed to button to avoid 404 error */}
+          <button 
+            onClick={handleSearchClick}
             className="grid h-9 w-9 place-items-center rounded-lg border border-white/10 bg-white/5 text-zinc-300 hover:text-white transition-colors"
           >
             <Search className="h-4 w-4" />
-          </Link>
+          </button>
 
           {user ? (
             <div className="flex items-center gap-2">
@@ -169,13 +170,13 @@ export function Header() {
 
         {/* Mobile Buttons */}
         <div className="flex items-center gap-2 md:hidden">
-          {/* 🔥 FIX: Changed href from "/comics" to "/search" */}
-          <Link 
-            href="/search"
+          {/* 🔥 FIX: Changed to button to avoid 404 error */}
+          <button 
+            onClick={handleSearchClick}
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-zinc-300"
           >
             <Search className="h-4 w-4" />
-          </Link>
+          </button>
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/5 text-white backdrop-blur focus:outline-none"
@@ -187,7 +188,6 @@ export function Header() {
 
       </div>
 
-      {/* 📱 MOBILE MENU: SCREENSHOT JAISE EXACT FONT & CLEAN FROSTED GLASS */}
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
