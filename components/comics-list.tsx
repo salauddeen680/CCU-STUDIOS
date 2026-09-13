@@ -6,27 +6,32 @@ import { VaultCard } from "./vault-card"
 import { GridSkeleton } from "./skeletons"
 import { Sparkles, Clock } from "lucide-react"
 
-// 🚀 NAYA FIX: Humne 'showUltimateOnly' naam ka ek switch add kiya hai
 export function ComicsList({ showUltimateOnly = false }: { showUltimateOnly?: boolean }) {
   const { comics = [], loading } = useComics()
   const [activeTab, setActiveTab] = useState<"published" | "upcoming">("published")
 
   if (loading) return <GridSkeleton count={8} />
 
-  // 🔥 1. ULTIMATE COMICS FILTER LOGIC
+  // 🔥 1. ULTIMATE VS NORMAL FILTER (ADMIN PANEL EXACT MATCH)
   const displayComics = comics.filter((c: any) => {
-    // Database mein check karega ki comic ultimate hai ya nahi
-    // Aapke Firebase mein jo bhi naam ho (category, type, ya isUltimate), yeh usko pakad lega
-    const isUltimate = c.category === "ultimate" || c.type === "ultimate" || c.isUltimate === true;
+    // Admin panel se jo 'timeline' save ho rahi hai, usko padhega
+    const timelineData = String(c.timeline || "").toLowerCase();
+    
+    // Agar dropdown se 'purani', 'dusri', ya 'ultimate' select hua hai, toh wo Ultimate hai
+    const isUltimate = 
+      timelineData.includes("ultimate comic") || 
+      timelineData.includes("purani timeline") || 
+      timelineData.includes("dusri universe") ||
+      timelineData.includes("ultimate");
     
     if (showUltimateOnly) {
-      return isUltimate; // Agar switch ON hai, toh SIRF Ultimate dikhayega
+      return isUltimate; // Ultimate Page: Sirf Purani/Dusri timeline dikhayega
     } else {
-      return !isUltimate; // Agar switch OFF hai, toh Ultimate ko chhod kar BAAKI SAB dikhayega
+      return !isUltimate; // Normal Page: Inko hatakar sirf "Asli Timeline" dikhayega
     }
   })
 
-  // 2. Separate Live (Published) and Upcoming Comics (Ab yeh naye filter hue data par chalega)
+  // 2. Separate Live (Published) and Upcoming Comics
   const publishedComics = displayComics.filter(
     (c: any) => !c.publishStatus || c.publishStatus === "published"
   )
@@ -93,7 +98,7 @@ export function ComicsList({ showUltimateOnly = false }: { showUltimateOnly?: bo
           </p>
         </div>
       ) : (
-        /* 🔵 HORIZONTAL SCROLLING ROWS (IC STUDIO STYLE) */
+        /* 🔵 HORIZONTAL SCROLLING ROWS */
         <div className="space-y-10 mt-6">
           {Object.entries(groupedComics).map(([seriesName, seriesComics]: [string, any]) => (
             <div key={seriesName} className="space-y-3">
@@ -103,19 +108,12 @@ export function ComicsList({ showUltimateOnly = false }: { showUltimateOnly?: bo
                 {seriesName}
               </h2>
               
-              {/* Horizontal Scroll Container (Side-by-side compact cards) */}
+              {/* Horizontal Scroll Container */}
               <div className="flex overflow-x-auto gap-4 pb-4 pt-1 no-scrollbar scroll-smooth">
                 {seriesComics.map((c: any, i: number) => (
                   <div key={c.id} className="relative group w-[150px] sm:w-[180px] flex-shrink-0">
                     
-                    {/* Release Date Badge (Top-Left corner par dikhega) */}
-                    {(c.releaseDate || c.date) && (
-                      <div className="absolute top-2 left-2 z-20 rounded bg-black/80 px-2 py-0.5 text-[9.5px] font-bold uppercase tracking-wider text-zinc-300 backdrop-blur-sm border border-zinc-700/60 shadow-md">
-                        {c.releaseDate || c.date}
-                      </div>
-                    )}
-
-                    {/* Yellow Badge */}
+                    {/* Status Badge */}
                     <div className="absolute top-2 right-2 z-20 rounded bg-yellow-400 px-2 py-0.5 text-[10px] font-black uppercase text-black shadow-md">
                       {c.publishStatus === "upcoming" ? "UPCOMING" : "RELEASED"}
                     </div>
