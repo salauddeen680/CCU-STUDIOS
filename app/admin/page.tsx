@@ -32,10 +32,10 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const db = getFirestore(app) 
 
-const ADMIN_ACCESS_KEY = "ccu-admin-2026"
+const ADMIN_ACCESS_KEY = process.env.NEXT_PUBLIC_ADMIN_KEY || "ccu-admin-2026"
 
 // 🛡️ Filter blacklist for developer testing spam
-const BLOCKED_EMAILS = ["admin@ccustudios.com", "srk042221@gmail.com"]
+const BLOCKED_EMAILS = (process.env.NEXT_PUBLIC_BLOCKED_EMAILS || "admin@ccustudios.com, srk04221@gmail.com").split(",")
 
 function AdvancedUniverseTraffic() {
   const [views, setViews] = useState<any[]>([])
