@@ -45,6 +45,31 @@ export function Footer() {
           >
             <Facebook size={20} />
           </a>
+          
+          {/* 🔥 NEW: TikTok Profile Link with exact outline icon */}
+          <a 
+            href="https://www.tiktok.com/@ccustudios_?_r=1&_t=ZS-99jI9rncQXi" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
+            </svg>
+          </a>
+
+          {/* 🔥 NEW: X (Twitter) Profile Link */}
+          <a 
+            href="https://x.com/ccu_studios" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="hover:text-primary transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 4l11.733 16h4.267l-11.733 -16z" />
+              <path d="M4 20l6.768 -6.768m2.46 -2.46l6.772 -6.772" />
+            </svg>
+          </a>
         </div>
         {/* --- SOCIAL MEDIA ICONS SECTION END --- */}
 
