@@ -3,6 +3,9 @@ name: Build Android APK & AAB
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,6 +30,19 @@ jobs:
 
       - name: Generate Master Production Android App
         run: |
+          # 🔥 1. GENERATE PERMANENT KEYSTORE (IF NOT EXISTS)
+          cd $GITHUB_WORKSPACE
+          if [ ! -f "ccu-studio.jks" ]; then
+            echo "Generating new Permanent Keystore..."
+            keytool -genkey -v -keystore ccu-studio.jks -alias ccu -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=CCU Studios, C=IN" -storepass ccu123456 -keypass ccu123456
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add ccu-studio.jks
+            git commit -m "Added Permanent Official Keystore for CCU Studios"
+            git push origin HEAD:${{ github.ref_name }} || true
+          fi
+
+          # 🔥 2. SETUP CAPACITOR PROJECT
           mkdir -p /tmp/app-build
           cd /tmp/app-build
           npm init -y
@@ -76,7 +92,7 @@ jobs:
           npx cap add android
           npx capacitor-assets generate --android
 
-          # 🔥 INJECTING FIREBASE IDENTITY CARD (ENCODED TO BYPASS GITHUB WARNINGS)
+          # 🔥 INJECTING FIREBASE IDENTITY CARD
           echo "eyAicHJvamVjdF9pbmZvIjogeyAicHJvamVjdF9udW1iZXIiOiAiMzU5ODA4MTMzMjk0IiwgInByb2plY3RfaWQiOiAiY2N1LXN0dWRpb3MiLCAic3RvcmFnZV9idWNrZXQiOiAiY2N1LXN0dWRpb3MuZmlyZWJhc2VzdG9yYWdlLmFwcCIgfSwgImNsaWVudCI6IFsgeyAiY2xpZW50X2luZm8iOiB7ICJtb2JpbGVzZGtfYXBwX2lkIjogIjE6MzU5ODA4MTMzMjk0OmFuZHJvaWQ6ODVlM2UzMWY0ZDc2MDU2MWQzZTUzZiIsICJhbmRyb2lkX2NsaWVudF9pbmZvIjogeyAicGFja2FnZV9uYW1lIjogImNvbS5jY3VzdHVkaW9zLmFwcCIgfSB9LCAib2F1dGhfY2xpZW50IjogWyB7ICJjbGllbnRfaWQiOiAiMzU5ODA4MTMzMjk0LTlsY3Z0Y2k4Z2NqNWVzYTB1aXRiZGIwNGh0dG5uY24wLmFwcHMuZ29vZ2xldXNlcmNvbnRlbnQuY29tIiwgImNsaWVudF90eXBlIjogMSwgImFuZHJvaWRfaW5mbyI6IHsgInBhY2thZ2VfbmFtZSI6ICJjb20uY2N1c3R1ZGlvcy5hcHAiLCAiY2VydGlmaWNhdGVfaGFzaCI6ICI3ZmY0ZWM5NGE0YjY3YmQ4MGMxZTNjZmE5ZjY4ODdjN2QzYTI2ZmQzIiB9IH0sIHsgImNsaWVudF9pZCI6ICIzNTk4MDgxMzMyOTQtdmsxYmMxMGI3dW9sdWJqa3Y0bmViaW05ZjJwNzRlYm4uYXBwcy5nb29nbGV1c2VyY29udGVudC5jb20iLCAiY2xpZW50X3R5cGUiOiAzIH0gXSwgImFwaV9rZXkiOiBbIHsgImN1cnJlbnRfa2V5IjogIkFjemFTeUROaHhrcFUtVXhfOUp1Uy1lQnZvZ3VhODVCWnlIa3A2ZyIgfSBdLCAic2VydmljZXMiOiB7ICJhcHBpbnZpdGVfc2VydmljZSI6IHsgIm90aGVyX3BsYXRmb3JtX29hdXRoX2NsaWVudCI6IFsgeyAiY2xpZW50X2lkIjogIjM1OTgwODEzMzI5NC12azFiYzEwYjd1b2x1YmprdjRuZWJpbTlmMnA3NGVibi5hcHBzLmdvb2dsZXVzZXJjb250ZW50LmNvbSIsICJjbGllbnRfdHlwZSI6IDMgfSBdIH0gfSB9IF0sICJjb25maWd1cmF0aW9uX3ZlcnNpb24iOiAiMSIgfQ==" | base64 -d > android/app/google-services.json
 
           cat << 'EOF' > android/app/src/main/res/values/strings.xml
@@ -217,29 +233,43 @@ jobs:
           cd android
           chmod +x gradlew
           
-          # 🔥 PEHLE BUILD HOGA TAAKI KEYSTORE BAN JAYE
-          ./gradlew assembleDebug --no-daemon
-          
-          # 🔥 YAHAN SE SHA-1 PRINT HOGA JO FIREBASE MEIN DAALNA ZAROORI HAI
+          # 🔥 3. FIREBASE SHA-1 KEY (FROM PERMANENT KEYSTORE)
           echo "========================================================"
           echo "🔑 YAHAN HAI AAPKI NAYI SHA-1 KEY FIREBASE KE LIYE:"
-          ./gradlew signingReport || true
+          keytool -list -v -keystore $GITHUB_WORKSPACE/ccu-studio.jks -alias ccu -storepass ccu123456 -keypass ccu123456 | grep SHA1 || true
           echo "========================================================"
 
-          ./gradlew bundleDebug --no-daemon
+          # 🔥 4. BUILD PERFECT RELEASE APK & AAB (NO DEBUG)
+          ./gradlew assembleRelease --no-daemon
+          ./gradlew bundleRelease --no-daemon
 
+          # Find the generated release files
+          APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          AAB_PATH="app/build/outputs/bundle/release/app-release.aab"
+
+          # 🔥 5. PERFECT STANDARD SIGNING USING ANDROID SDK
+          BUILD_TOOLS_DIR=$(ls -d $ANDROID_HOME/build-tools/* | tail -1)
+          
+          # Sign AAB (Official standard for Play Store/Indus)
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore $GITHUB_WORKSPACE/ccu-studio.jks -storepass ccu123456 $AAB_PATH ccu
+          
+          # Align and Sign APK (Official standard for direct install)
+          $BUILD_TOOLS_DIR/zipalign -v -p 4 $APK_PATH aligned.apk
+          $BUILD_TOOLS_DIR/apksigner sign --ks $GITHUB_WORKSPACE/ccu-studio.jks --ks-pass pass:ccu123456 --ks-key-alias ccu --key-pass pass:ccu123456 aligned.apk
+
+          # 🔥 6. MOVE FILES TO OUTPUT FOLDER
           mkdir -p $GITHUB_WORKSPACE/output
-          cp app/build/outputs/apk/debug/app-debug.apk $GITHUB_WORKSPACE/output/CCU-Studios.apk
-          cp app/build/outputs/bundle/debug/app-debug.aab $GITHUB_WORKSPACE/output/CCU-Studios.aab
+          cp aligned.apk $GITHUB_WORKSPACE/output/CCU-Studios-Release.apk
+          cp $AAB_PATH $GITHUB_WORKSPACE/output/CCU-Studios-Release.aab
 
       - name: Upload Direct Install APK
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-Direct-Install-APK
-          path: output/CCU-Studios.apk
+          path: output/CCU-Studios-Release.apk
 
       - name: Upload Play Store AAB
         uses: actions/upload-artifact@v4
         with:
           name: CCU-Studios-Store-AAB
-          path: output/CCU-Studios.aab
+          path: output/CCU-Studios-Release.aab
