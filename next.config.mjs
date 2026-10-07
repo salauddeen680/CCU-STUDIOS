@@ -9,6 +9,9 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
+    // 🔥 Sabse zaroori line: Yeh Vercel ko image process karne se rokegi aur limit ko bacha legi
+    unoptimized: true,
+    
     // 🔥 Next-gen fast formats (80% file size chota karega)
     formats: ['image/avif', 'image/webp'],
     // 🔥 Phone memory aur CDN mein 30 din tak image save rahegi (instant reload)
