@@ -65,6 +65,9 @@ export const metadata: Metadata = {
   },
   verification: {
     google: "XXO_Zb9ewdf1cBmv-LqID5RdX-oPzpjuyMZ2ApSUuyM",
+    other: {
+      "msvalidate.01": "3656BBDB3E6A5C1B51F3F42460591EAA",
+    },
   },
   icons: {
     icon: "/ccu-logo.png",
