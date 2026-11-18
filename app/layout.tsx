@@ -105,15 +105,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       }
     ]
   }
-
-  return (
+    return (
     <html lang="en" className={`${inter.variable} ${oswald.variable} bg-background`}>
       <head>
+        {/* 🔥 Bing Verification Meta Tag (Directly added here) */}
+        <meta name="msvalidate.01" content="3656BBDB3E6A5C1B51F3F42460591EAA" />
+        
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(studioSchema) }}
         />
-        {/* 🔥 FIX: Raw script ki jagah Next.js Script component use kiya */}
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       </head>
       <body className="font-sans antialiased bg-background text-foreground">
@@ -121,7 +122,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {children}
         <Analytics /> 
         
-        {/* 🔥 FIX: Service Worker ko bhi optimized Script tag mein convert kiya */}
         <Script
           id="pwa-sw"
           strategy="afterInteractive"
